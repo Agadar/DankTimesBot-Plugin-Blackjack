@@ -58,13 +58,15 @@ export class BlackjackGame {
     /**
      * Initializes this game, starting a timer during which players can join
      * the game. After the timer, the game starts.
+     * @return The number of seconds before the game starts.
      */
-    public initializeGame(): void {
+    public initializeGame(): number {
         if (this.gameState !== GameState.INITIALIZING) {
             throw new Error("Game has already been initialized - this is a programming error!");
         }
         this.gameState = GameState.AWAITING_PLAYERS;
         setTimeout(this.dealCards.bind(this), BlackjackGame.TIME_WAIT_FOR_PLAYERS_MS);
+        return BlackjackGame.TIME_WAIT_FOR_PLAYERS_MS / 1000;
     }
 
     /**

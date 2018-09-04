@@ -43,7 +43,7 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener {
       .map((player) => `@${player.user.name} is showing ${this.cardsAsString(player)}`)
       .join("\n");
     const playerTurnMsg = this.getNextPlayerTurnMessage(startingPlayer, game);
-    const cardsInfo = `The game has begun!\n${dealerLine}\n${playerLines}\n\n${playerTurnMsg}`;
+    const cardsInfo = `The game has begun!\n\n${dealerLine}\n${playerLines}\n\n${playerTurnMsg}`;
     this.sendMessage(game.chat.id, cardsInfo);
   }
 
@@ -104,8 +104,9 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener {
     try {
       if (!this.games.has(chat.id)) {
         game = this.createGame(chat, user, bet);
-        game.initializeGame();
-        reply = `📢 @${user.name} started a game of Blackjack, waiting for more players...`;
+        const secondsUntilStart = game.initializeGame();
+        reply = `📢 @${user.name} is starting a game of Blackjack, starting in ${secondsUntilStart} seconds...` +
+          `\n\nMake a /${Plugin.BET_CMD} to join in.`;
       } else {
         game = this.games.get(chat.id);
         game.joinGame(user, bet);
@@ -141,6 +142,8 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener {
       if (info.currentPlayer.isBusted) {
         const nextPlayerTurnMsg = this.getNextPlayerTurnMessage(info.nextPlayer, game);
         reply += `\n\n${nextPlayerTurnMsg}`;
+      } else {
+        reply += this.getPlayerTurnOptionsText();
       }
       return reply;
 
@@ -160,7 +163,11 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener {
   private getNextPlayerTurnMessage(player: Player, game: BlackjackGame): string {
     const playerName = this.formatPlayerName(player);
     const playerCardsText = this.cardsAsString(player);
-    return `❕ It's now ${playerName}'s turn. They are showing ${playerCardsText}`;
+    let msg = `❕ It's now ${playerName}'s turn. They are showing ${playerCardsText}`;
+    if (!player.isDealer) {
+      msg += this.getPlayerTurnOptionsText();
+    }
+    return msg;
   }
 
   private getWinnerListText(winners: Player[]): string {
@@ -193,5 +200,9 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener {
       return `@${player.name}`;
     }
     return player.name;
+  }
+
+  private getPlayerTurnOptionsText(): string {
+    return `\n\nDo you want to /${Plugin.HIT_CMD}, or /${Plugin.STAND_CMD}?`;
   }
 }
