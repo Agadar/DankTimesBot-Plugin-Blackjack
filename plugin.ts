@@ -52,9 +52,7 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener {
    */
   public onDealerDrewCard(game: BlackjackGame, card: Card): void {
     let message = `The dealer drew ${card.toString()}.`;
-    if (game.dealer.nonBustedHandValues.length > 0) {
-      message += `   ${this.handValuesAsString(game.dealer.nonBustedHandValues)}`;
-    }
+    message += this.handValuesAsString(game.dealer);
     this.sendMessage(game.chat.id, message);
   }
 
@@ -138,13 +136,11 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener {
     try {
       const info = game.hit(user.id);
       let reply = `The dealer deals @${info.currentPlayer.user.name} ${info.card.toString()}.`;
-      if (info.currentPlayer.nonBustedHandValues.length > 0) {
-        reply += `   ${this.handValuesAsString(info.currentPlayer.nonBustedHandValues)}`;
-      }
+      reply += this.handValuesAsString(info.currentPlayer);
 
       if (info.currentPlayer.isBusted) {
         const nextPlayerTurnMsg = this.getNextPlayerTurnMessage(info.nextPlayer, game);
-        reply += ` @${info.currentPlayer.user.name} busted.\n\n${nextPlayerTurnMsg}`;
+        reply += `\n\n${nextPlayerTurnMsg}`;
       }
       return reply;
 
@@ -187,13 +183,14 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener {
 
   private cardsAsString(player: Player): string {
     let cardsString = `${player.cards.map((card) => card.toString()).join(" , ")}.`;
-    if (player.nonBustedHandValues.length > 0) {
-      cardsString += `   ${this.handValuesAsString(player.nonBustedHandValues)}`;
-    }
+    cardsString += this.handValuesAsString(player);
     return cardsString;
   }
 
-  private handValuesAsString(handValues: number[]): string {
-    return `(${handValues.map((value) => value.toString()).join(" or ")})`;
+  private handValuesAsString(player: Player): string {
+    if (!player.isBusted) {
+      return `   (${player.nonBustedHandValues.map((value) => value.toString()).join(" or ")})`;
+    }
+    return ` @${player.user.name} busted.`;
   }
 }
