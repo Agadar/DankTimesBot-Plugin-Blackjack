@@ -43,11 +43,9 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener {
     const playerLines = game.players
       .map((player) => `@${player.user.name} is showing ${this.cardsAsString(player.cards)}.`)
       .join("\n");
-    const cardsInfo = `The game has begun!\n${dealerLine}\n${playerLines}`;
-    this.sendMessage(game.chat.id, cardsInfo);
-
     const playerTurnMsg = this.getNextPlayerTurnMessage(startingPlayer, game);
-    this.sendMessage(game.chat.id, playerTurnMsg);
+    const cardsInfo = `The game has begun!\n${dealerLine}\n${playerLines}\n\n${playerTurnMsg}`;
+    this.sendMessage(game.chat.id, cardsInfo);
   }
 
   /**
