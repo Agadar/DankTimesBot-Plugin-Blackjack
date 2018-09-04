@@ -38,10 +38,9 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener {
    * @implements IBlackjackGameListener
    */
   public onCardsDealt(game: BlackjackGame, startingPlayer: Player): void {
-
-    const dealerLine = `The dealer is showing ${this.cardsAsString(game.dealerCards)}.`;
+    const dealerLine = `The dealer is showing ${this.cardsAsString(game.dealer)}`;
     const playerLines = game.players
-      .map((player) => `@${player.user.name} is showing ${this.cardsAsString(player.cards)}.`)
+      .map((player) => `@${player.user.name} is showing ${this.cardsAsString(player)}`)
       .join("\n");
     const playerTurnMsg = this.getNextPlayerTurnMessage(startingPlayer, game);
     const cardsInfo = `The game has begun!\n${dealerLine}\n${playerLines}\n\n${playerTurnMsg}`;
@@ -52,7 +51,10 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener {
    * @implements IBlackjackGameListener
    */
   public onDealerDrewCard(game: BlackjackGame, card: Card): void {
-    const message = `The dealer drew ${card.toString()}.`;
+    let message = `The dealer drew ${card.toString()}.`;
+    if (game.dealer.nonBustedHandValues.length > 0) {
+      message += `   ${this.handValuesAsString(game.dealer.nonBustedHandValues)}`;
+    }
     this.sendMessage(game.chat.id, message);
   }
 
@@ -135,11 +137,14 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener {
 
     try {
       const info = game.hit(user.id);
-      let reply = `The dealer deals you ${info.card.toString()}.`;
+      let reply = `The dealer deals @${info.currentPlayer.user.name} ${info.card.toString()}.`;
+      if (info.currentPlayer.nonBustedHandValues.length > 0) {
+        reply += `   ${this.handValuesAsString(info.currentPlayer.nonBustedHandValues)}`;
+      }
 
-      if (info.busted) {
+      if (info.currentPlayer.isBusted) {
         const nextPlayerTurnMsg = this.getNextPlayerTurnMessage(info.nextPlayer, game);
-        reply += ` You busted.\n\n${nextPlayerTurnMsg}`;
+        reply += ` @${info.currentPlayer.user.name} busted.\n\n${nextPlayerTurnMsg}`;
       }
       return reply;
 
@@ -158,18 +163,18 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener {
 
   private getNextPlayerTurnMessage(player: Player | null, game: BlackjackGame): string {
     let playerName: string;
-    let playerCards: Card[];
+    let thePlayer: Player;
 
     if (player == null) {
       playerName = "the dealer";
-      playerCards = game.dealerCards;
+      thePlayer = game.dealer;
     } else {
       playerName = `@${player.user.name}`;
-      playerCards = player.cards;
+      thePlayer = player;
     }
 
-    const playerCardsText = this.cardsAsString(playerCards);
-    return `❕ It's now ${playerName}'s turn. They are showing ${playerCardsText}.`;
+    const playerCardsText = this.cardsAsString(thePlayer);
+    return `❕ It's now ${playerName}'s turn. They are showing ${playerCardsText}`;
   }
 
   private getWinnerListText(winners: Player[]): string {
@@ -180,7 +185,15 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener {
     return `${winnersList} beat the dealer 🤑`;
   }
 
-  private cardsAsString(cards: Card[]): string {
-    return cards.map((card) => `${card.toString()}`).join(", ");
+  private cardsAsString(player: Player): string {
+    let cardsString = `${player.cards.map((card) => card.toString()).join(" , ")}.`;
+    if (player.nonBustedHandValues.length > 0) {
+      cardsString += `   ${this.handValuesAsString(player.nonBustedHandValues)}`;
+    }
+    return cardsString;
+  }
+
+  private handValuesAsString(handValues: number[]): string {
+    return `(${handValues.map((value) => value.toString()).join(" or ")})`;
   }
 }

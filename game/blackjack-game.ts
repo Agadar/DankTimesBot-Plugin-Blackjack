@@ -18,8 +18,9 @@ export class BlackjackGame {
     private static readonly TIME_PLAYER_TURN_MS = 15000;
     private static readonly TIME_BETWEEN_ACTIONS = 3000;
 
+    public readonly dealer = new Player();
+
     private readonly myPlayers = new Array<Player>();
-    private readonly dealer = new Player();
     private readonly listeners = new Array<IBlackjackGameListener>();
 
     private gameState = GameState.INITIALIZING;
@@ -46,13 +47,6 @@ export class BlackjackGame {
         if (this.listeners.indexOf(subscriber) === -1) {
             this.listeners.push(subscriber);
         }
-    }
-
-    /**
-     * Gets the dealer's cards.
-     */
-    public get dealerCards(): Card[] {
-        return this.dealer.cards;
     }
 
     /**
@@ -121,29 +115,30 @@ export class BlackjackGame {
      * Instructs the dealer the user desires to hit.
      * @param userId The id of the user desiring to hit.
      * @return Information about the hit results, including the drawn card,
-     * whether the player is busted, and which player is up next (which is
-     * the current player if they weren't busted, or null if the dealer is
-     * up next.)
+     * whether the player is busted, which player had the card drawn, and
+     * which player is up next (which is the current player if they weren't busted,
+     * or null if the dealer is up next.)
      * @throws Error if it is not the user's turn.
      */
-    public hit(userId: number): { card: Card, busted: boolean, nextPlayer: Player | null } {
+    public hit(userId: number): { card: Card, currentPlayer: Player, nextPlayer: Player | null } {
         if (this.gameState !== GameState.PLAYER_TURNS) { throw new Error("It is not your turn!"); }
-        const currentPlayer = this.currentPlayer;
-        if (currentPlayer === null || currentPlayer.user.id !== userId) { throw new Error("It is not your turn!"); }
+        const theCurrentPlayer = this.currentPlayer;
+        if (theCurrentPlayer === null || theCurrentPlayer.user.id !== userId) {
+            throw new Error("It is not your turn!");
+        }
         clearTimeout(this.playerTurnTimeoutId);
 
         const drawnCard = this.deck.drawCard();
-        currentPlayer.giveCards(drawnCard);
-        const isBusted = currentPlayer.isBusted;
+        theCurrentPlayer.giveCards(drawnCard);
         let theNextPlayer: Player | null = null;
 
-        if (isBusted) {
+        if (theCurrentPlayer.isBusted) {
             theNextPlayer = this.startNextPlayerTurn();
         } else {
             this.schedulePlayerTurnTimeout();
-            theNextPlayer = currentPlayer;
+            theNextPlayer = theCurrentPlayer;
         }
-        return { card: drawnCard, busted: isBusted, nextPlayer: theNextPlayer };
+        return { card: drawnCard, currentPlayer: theCurrentPlayer, nextPlayer: theNextPlayer };
     }
 
     private dealCards(): void {

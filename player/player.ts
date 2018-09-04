@@ -13,7 +13,7 @@ export class Player {
     private readonly mycards = new Array<Card>();
 
     private myIsBusted = false;
-    private myHighestNonBustedHandValue = 0;
+    private myNonBustedHandValues: number[] = [];
     private myHasReachedDealerMinimum = false;
     private myHasBlackjack = false;
 
@@ -32,7 +32,7 @@ export class Player {
         cards.forEach((card) => this.mycards.push(card));
         const handValues = this.calculatePossibleHandValues();
         this.recalculateIsBusted(handValues);
-        this.recalculateHighestNonBustedHandValue(handValues);
+        this.recalculateNonBustedHandValues(handValues);
         this.recalculateHasReachedDealerMinimum(handValues);
     }
 
@@ -51,10 +51,22 @@ export class Player {
     }
 
     /**
-     * Gets the highest unbusted hand value of this player's hand.
+     * Gets the highest unbusted hand value of this player's hand, or
+     * -1 if they have no unbusted combination of cards.
      */
     public get highestNonBustedHandValue(): number {
-        return this.myHighestNonBustedHandValue;
+        if (this.nonBustedHandValues.length > 0) {
+            return this.nonBustedHandValues[0];
+        }
+        return -1;
+    }
+
+    /**
+     * Gets this player's unbusted hand values, sorted from highest
+     * values to lowest values.
+     */
+    public get nonBustedHandValues(): number[] {
+        return this.myNonBustedHandValues;
     }
 
     /**
@@ -95,14 +107,10 @@ export class Player {
         this.myIsBusted = index === -1;
     }
 
-    private recalculateHighestNonBustedHandValue(handValues: number[]): void {
+    private recalculateNonBustedHandValues(handValues: number[]): void {
         const nonBustedHandValues = handValues.filter((value) => value <= Player.BLACKJACK);
-        if (nonBustedHandValues.length < 1) {
-            this.myHighestNonBustedHandValue = 0;
-        } else {
-            this.myHighestNonBustedHandValue = Math.max(...nonBustedHandValues);
-        }
-        this.myHasBlackjack = this.myHighestNonBustedHandValue === Player.BLACKJACK;
+        this.myNonBustedHandValues = nonBustedHandValues.sort((a, b) => b - a);
+        this.myHasBlackjack = this.highestNonBustedHandValue === Player.BLACKJACK;
     }
 
     private recalculateHasReachedDealerMinimum(handValues: number[]): void {
