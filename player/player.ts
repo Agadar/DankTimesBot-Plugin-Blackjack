@@ -19,7 +19,8 @@ export class Player {
 
     /**
      * Initializes a new player.
-     * @param user The user behind the player.
+     * @param user The user behind the player. If not supplied, this player
+     * is assumed to be the dealer.
      * @param bet The original bet of the player.
      */
     constructor(public readonly user?: User, public readonly bet?: number) { }
@@ -81,6 +82,23 @@ export class Player {
      */
     public get hasBlackjack(): boolean {
         return this.myHasBlackjack;
+    }
+
+    /**
+     * Gets this player's name.
+     */
+    public get name(): string {
+        if (this.user) {
+            return this.user.name;
+        }
+        return "the dealer";
+    }
+
+    /**
+     * Gets whether this player is the dealer.
+     */
+    public get isDealer(): boolean {
+        return this.user === undefined || this.user === null;
     }
 
     private calculatePossibleHandValues(): number[] {

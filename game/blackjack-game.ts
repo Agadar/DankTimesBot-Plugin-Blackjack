@@ -18,8 +18,7 @@ export class BlackjackGame {
     private static readonly TIME_PLAYER_TURN_MS = 15000;
     private static readonly TIME_BETWEEN_ACTIONS = 3000;
 
-    public readonly dealer = new Player();
-
+    private readonly dealer = new Player();
     private readonly myPlayers = new Array<Player>();
     private readonly listeners = new Array<IBlackjackGameListener>();
 
@@ -100,13 +99,14 @@ export class BlackjackGame {
     /**
      * If it is the user's turn, instructs the dealer they desire to stand.
      * @param userId The id of the user desiring to stand.
-     * @return The player that is next, or null if the dealer is up next.
+     * @return The player that is next, which can also be the dealer.
      * @throws Error if it is not the user's turn.
      */
-    public stand(userId: number): Player | null {
+    public stand(userId: number): Player {
         if (this.gameState !== GameState.PLAYER_TURNS) { throw new Error("It is not your turn!"); }
         const currentPlayer = this.currentPlayer;
-        if (currentPlayer === null || currentPlayer.user.id !== userId) { throw new Error("It is not your turn!"); }
+        if (currentPlayer === this.dealer ||
+            currentPlayer.user.id !== userId) { throw new Error("It is not your turn!"); }
         clearTimeout(this.playerTurnTimeoutId);
         return this.startNextPlayerTurn();
     }
@@ -117,20 +117,20 @@ export class BlackjackGame {
      * @return Information about the hit results, including the drawn card,
      * whether the player is busted, which player had the card drawn, and
      * which player is up next (which is the current player if they weren't busted,
-     * or null if the dealer is up next.)
+     * and can also be the dealer).
      * @throws Error if it is not the user's turn.
      */
-    public hit(userId: number): { card: Card, currentPlayer: Player, nextPlayer: Player | null } {
+    public hit(userId: number): { card: Card, currentPlayer: Player, nextPlayer: Player } {
         if (this.gameState !== GameState.PLAYER_TURNS) { throw new Error("It is not your turn!"); }
         const theCurrentPlayer = this.currentPlayer;
-        if (theCurrentPlayer === null || theCurrentPlayer.user.id !== userId) {
+        if (theCurrentPlayer === this.dealer || theCurrentPlayer.user.id !== userId) {
             throw new Error("It is not your turn!");
         }
         clearTimeout(this.playerTurnTimeoutId);
 
         const drawnCard = this.deck.drawCard();
         theCurrentPlayer.giveCards(drawnCard);
-        let theNextPlayer: Player | null = null;
+        let theNextPlayer: Player;
 
         if (theCurrentPlayer.isBusted) {
             theNextPlayer = this.startNextPlayerTurn();
@@ -148,7 +148,7 @@ export class BlackjackGame {
         this.myPlayers.forEach((player) => player.giveCards(this.deck.drawCard(), this.deck.drawCard()));
         this.gameState = GameState.PLAYER_TURNS;
         const currentPlayer = this.startNextPlayerTurn();
-        this.listeners.forEach((listener) => listener.onCardsDealt(this, currentPlayer));
+        this.listeners.forEach((listener) => listener.onCardsDealt(this, this.dealer, currentPlayer));
     }
 
     private schedulePlayerTurnTimeout(): void {
@@ -161,11 +161,11 @@ export class BlackjackGame {
         this.listeners.forEach((listener) => listener.onPlayerTurnTimedOut(this, timedOutPlayer, nextPlayer));
     }
 
-    private startNextPlayerTurn(): Player | null {
+    private startNextPlayerTurn(): Player {
         this.playerTurnIndex++;
         const currentPlayer = this.currentPlayer;
 
-        if (currentPlayer === null) {
+        if (currentPlayer === this.dealer) {
             this.scheduleDealerTurn();
         } else {
             this.schedulePlayerTurnTimeout();
@@ -190,7 +190,7 @@ export class BlackjackGame {
         while (!this.dealer.isBusted && !this.dealer.hasReachedDealerMinimum) {
             const newCard = this.deck.drawCard();
             this.dealer.giveCards(newCard);
-            this.listeners.forEach((listener) => listener.onDealerDrewCard(this, newCard));
+            this.listeners.forEach((listener) => listener.onDealerDrewCard(this, this.dealer, newCard));
             await this.asyncSleep(BlackjackGame.TIME_BETWEEN_ACTIONS);
         }
 
@@ -222,9 +222,9 @@ export class BlackjackGame {
         });
     }
 
-    private get currentPlayer(): Player | null {
+    private get currentPlayer(): Player {
         if (this.playerTurnIndex >= this.myPlayers.length) {
-            return null;
+            return this.dealer;
         }
         return this.myPlayers[this.playerTurnIndex];
     }

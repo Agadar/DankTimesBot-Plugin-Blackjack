@@ -37,8 +37,8 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener {
   /**
    * @implements IBlackjackGameListener
    */
-  public onCardsDealt(game: BlackjackGame, startingPlayer: Player): void {
-    const dealerLine = `The dealer is showing ${this.cardsAsString(game.dealer)}`;
+  public onCardsDealt(game: BlackjackGame, dealer: Player, startingPlayer: Player): void {
+    const dealerLine = `The dealer is showing ${this.cardsAsString(dealer)}`;
     const playerLines = game.players
       .map((player) => `@${player.user.name} is showing ${this.cardsAsString(player)}`)
       .join("\n");
@@ -50,9 +50,9 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener {
   /**
    * @implements IBlackjackGameListener
    */
-  public onDealerDrewCard(game: BlackjackGame, card: Card): void {
+  public onDealerDrewCard(game: BlackjackGame, dealer: Player, card: Card): void {
     let message = `The dealer drew ${card.toString()}.`;
-    message += this.handValuesAsString(game.dealer);
+    message += this.handValuesAsString(dealer);
     this.sendMessage(game.chat.id, message);
   }
 
@@ -157,19 +157,9 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener {
     return game;
   }
 
-  private getNextPlayerTurnMessage(player: Player | null, game: BlackjackGame): string {
-    let playerName: string;
-    let thePlayer: Player;
-
-    if (player == null) {
-      playerName = "the dealer";
-      thePlayer = game.dealer;
-    } else {
-      playerName = `@${player.user.name}`;
-      thePlayer = player;
-    }
-
-    const playerCardsText = this.cardsAsString(thePlayer);
+  private getNextPlayerTurnMessage(player: Player, game: BlackjackGame): string {
+    const playerName = this.formatPlayerName(player);
+    const playerCardsText = this.cardsAsString(player);
     return `❕ It's now ${playerName}'s turn. They are showing ${playerCardsText}`;
   }
 
@@ -191,6 +181,17 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener {
     if (!player.isBusted) {
       return `   (${player.nonBustedHandValues.map((value) => value.toString()).join(" or ")})`;
     }
-    return ` @${player.user.name} busted.`;
+    if (!player.isDealer) {
+      return ` @${player.name} busted.`;
+    } else {
+      return " The dealer busted.";
+    }
+  }
+
+  private formatPlayerName(player: Player): string {
+    if (!player.isDealer) {
+      return `@${player.name}`;
+    }
+    return player.name;
   }
 }

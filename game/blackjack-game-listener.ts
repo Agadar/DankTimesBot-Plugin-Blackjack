@@ -11,9 +11,10 @@ export interface IBlackjackGameListener {
      * Called when the initial round of cards has been dealt after
      * the wait on players is over.
      * @param game The game.
+     * @param dealer The dealer.
      * @param startingPlayer The player that is up first.
      */
-    onCardsDealt(game: BlackjackGame, startingPlayer: Player): void;
+    onCardsDealt(game: BlackjackGame, dealer: Player, startingPlayer: Player): void;
 
     /**
      * Called when a player took too long to make a decision, and thus
@@ -27,9 +28,10 @@ export interface IBlackjackGameListener {
     /**
      * Called when the dealer has drawn a card for themselves.
      * @param game The game.
+     * @param dealer The dealer.
      * @param card The drawn card.
      */
-    onDealerDrewCard(game: BlackjackGame, card: Card): void;
+    onDealerDrewCard(game: BlackjackGame, dealer: Player, card: Card): void;
 
     /**
      * Called when the game has ended.
