@@ -117,7 +117,7 @@ export class Player {
             }
             sums = newSums;
         }
-        return sums;
+        return this.removeDuplicates(sums);
     }
 
     private recalculateIsBusted(handValues: number[]): void {
@@ -135,5 +135,9 @@ export class Player {
         const foundIndex = handValues
             .findIndex((value) => value >= Player.DEALER_MIN_GOAL && value <= Player.BLACKJACK);
         this.myHasReachedDealerMinimum = foundIndex !== -1;
+    }
+
+    private removeDuplicates(numbers: number[]): number[] {
+        return numbers.filter((elem, index, self) => index === self.indexOf(elem));
     }
 }
