@@ -1,5 +1,6 @@
 import { User } from "../../../src/chat/user/user";
 import { Card } from "../card/card";
+import { Rank } from "../card/rank";
 import { RANK_VALUES } from "../card/rankValues";
 
 /**
@@ -7,15 +8,15 @@ import { RANK_VALUES } from "../card/rankValues";
  */
 export class Player {
 
-    private static readonly BLACKJACK = 21;
+    private static readonly MAX_HAND_VALUE = 21;
     private static readonly DEALER_MIN_GOAL = 17;
 
     private readonly mycards = new Array<Card>();
 
+    private myHasBlackjack = false;
     private myIsBusted = false;
     private myNonBustedHandValues: number[] = [];
     private myHasReachedDealerMinimum = false;
-    private myHasBlackjack = false;
 
     /**
      * Initializes a new player.
@@ -35,6 +36,7 @@ export class Player {
         this.recalculateIsBusted(handValues);
         this.recalculateNonBustedHandValues(handValues);
         this.recalculateHasReachedDealerMinimum(handValues);
+        this.recalculateHasBlackjack();
     }
 
     /**
@@ -85,13 +87,13 @@ export class Player {
     }
 
     /**
-     * Gets this player's name.
+     * Gets this player's formatted name.
      */
     public get name(): string {
         if (this.user) {
-            return this.user.name;
+            return `@${this.user.name}`;
         }
-        return "the dealer";
+        return "The dealer";
     }
 
     /**
@@ -99,6 +101,14 @@ export class Player {
      */
     public get isDealer(): boolean {
         return this.user === undefined || this.user === null;
+    }
+
+    /**
+     * Whether this player may draw another card according to their
+     * busted and blackjack status.
+     */
+    public get mayDrawCard(): boolean {
+        return !this.isBusted && !this.hasBlackjack;
     }
 
     private calculatePossibleHandValues(): number[] {
@@ -120,20 +130,28 @@ export class Player {
         return this.removeDuplicates(sums);
     }
 
+    private recalculateHasBlackjack(): void {
+        if (this.mycards.length !== 2) {
+            this.myHasBlackjack = false;
+        } else {
+            this.myHasBlackjack = this.highestNonBustedHandValue === Player.MAX_HAND_VALUE &&
+                (this.mycards[0].rank === Rank.Ace || this.mycards[1].rank === Rank.Ace);
+        }
+    }
+
     private recalculateIsBusted(handValues: number[]): void {
-        const index = handValues.findIndex((value) => value <= Player.BLACKJACK);
+        const index = handValues.findIndex((value) => value <= Player.MAX_HAND_VALUE);
         this.myIsBusted = index === -1;
     }
 
     private recalculateNonBustedHandValues(handValues: number[]): void {
-        const nonBustedHandValues = handValues.filter((value) => value <= Player.BLACKJACK);
+        const nonBustedHandValues = handValues.filter((value) => value <= Player.MAX_HAND_VALUE);
         this.myNonBustedHandValues = nonBustedHandValues.sort((a, b) => b - a);
-        this.myHasBlackjack = this.highestNonBustedHandValue === Player.BLACKJACK;
     }
 
     private recalculateHasReachedDealerMinimum(handValues: number[]): void {
         const foundIndex = handValues
-            .findIndex((value) => value >= Player.DEALER_MIN_GOAL && value <= Player.BLACKJACK);
+            .findIndex((value) => value >= Player.DEALER_MIN_GOAL && value <= Player.MAX_HAND_VALUE);
         this.myHasReachedDealerMinimum = foundIndex !== -1;
     }
 

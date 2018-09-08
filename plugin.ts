@@ -6,7 +6,9 @@ import { Card } from "./card/card";
 import { DeckFactory } from "./deck/deckFactory";
 import { BlackjackGame } from "./game/blackjack-game";
 import { IBlackjackGameListener } from "./game/blackjack-game-listener";
+import { GameConclusion } from "./game/game-conclusion";
 import { Player } from "./player/player";
+import { PluginTexts } from "./util/plugin-texts";
 
 export class Plugin extends AbstractPlugin implements IBlackjackGameListener {
 
@@ -16,6 +18,7 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener {
   private static readonly HIT_CMD = "hit";
 
   private readonly deckFactory = new DeckFactory();
+  private readonly pluginTexts = new PluginTexts(Plugin.HIT_CMD, Plugin.STAND_CMD);
   private readonly games = new Map<number, BlackjackGame>();
 
   constructor() {
@@ -38,11 +41,9 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener {
    * @implements IBlackjackGameListener
    */
   public onCardsDealt(game: BlackjackGame, dealer: Player, startingPlayer: Player): void {
-    const dealerLine = `The dealer is showing ${this.cardsAsString(dealer)}`;
-    const playerLines = game.players
-      .map((player) => `@${player.user.name} is showing ${this.cardsAsString(player)}`)
-      .join("\n");
-    const playerTurnMsg = this.getNextPlayerTurnMessage(startingPlayer, game);
+    const dealerLine = this.pluginTexts.getCardsDealtPlayerTextLine(dealer);
+    const playerLines = game.players.map((player) => this.pluginTexts.getCardsDealtPlayerTextLine(player)).join("\n");
+    const playerTurnMsg = this.pluginTexts.getNextPlayerTurnMessage(startingPlayer);
     const cardsInfo = `The game has begun!\n\n${dealerLine}\n${playerLines}\n\n${playerTurnMsg}`;
     this.sendMessage(game.chat.id, cardsInfo);
   }
@@ -52,21 +53,21 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener {
    */
   public onDealerDrewCard(game: BlackjackGame, dealer: Player, card: Card): void {
     let message = `The dealer drew ${card.toString()}.`;
-    message += this.handValuesAsString(dealer);
+    message += this.pluginTexts.handValuesAsString(dealer);
     this.sendMessage(game.chat.id, message);
   }
 
   /**
    * @implements IBlackjackGameListener
    */
-  public onGameEnded(game: BlackjackGame, winners: Player[], dealerBusted: boolean): void {
+  public onGameEnded(game: BlackjackGame, conclusion: GameConclusion): void {
     let message;
-    if (dealerBusted) {
-      message = "The dealer went bust. The game has ended. ";
+    if (conclusion.dealerBusted) {
+      message = "The dealer went bust. The game has ended.\n\n";
     } else {
-      message = "The dealer stands. The game has ended. ";
+      message = "The dealer stands. The game has ended.\n\n";
     }
-    message += this.getWinnerListText(winners);
+    message += this.pluginTexts.getGameConclusionText(conclusion);
     this.sendMessage(game.chat.id, message);
     this.games.delete(game.chat.id);
   }
@@ -75,8 +76,8 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener {
    * @implements IBlackjackGameListener
    */
   public onPlayerTurnTimedOut(game: BlackjackGame, timedOutPlayer: Player, nextPlayer: Player) {
-    const playerTurnMsg = this.getNextPlayerTurnMessage(nextPlayer, game);
-    const message = `@${timedOutPlayer.user.name} took too long to decide.\n\n${playerTurnMsg}`;
+    const playerTurnMsg = this.pluginTexts.getNextPlayerTurnMessage(nextPlayer);
+    const message = `${timedOutPlayer.name} took too long to decide.\n\n${playerTurnMsg}`;
     this.sendMessage(game.chat.id, message);
   }
 
@@ -124,7 +125,7 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener {
 
     try {
       const nextPlayer = game.stand(user.id);
-      return this.getNextPlayerTurnMessage(nextPlayer, game);
+      return this.pluginTexts.getNextPlayerTurnMessage(nextPlayer);
     } catch (ex) {
       // Silent ignore.
     }
@@ -136,14 +137,14 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener {
 
     try {
       const info = game.hit(user.id);
-      let reply = `The dealer deals @${info.currentPlayer.user.name} ${info.card.toString()}.`;
-      reply += this.handValuesAsString(info.currentPlayer);
+      let reply = `The dealer deals ${info.currentPlayer.name} ${info.card.toString()}.`;
+      reply += this.pluginTexts.handValuesAsString(info.currentPlayer);
 
       if (info.currentPlayer.isBusted) {
-        const nextPlayerTurnMsg = this.getNextPlayerTurnMessage(info.nextPlayer, game);
+        const nextPlayerTurnMsg = this.pluginTexts.getNextPlayerTurnMessage(info.nextPlayer);
         reply += `\n\n${nextPlayerTurnMsg}`;
       } else {
-        reply += this.getPlayerTurnOptionsText();
+        reply += this.pluginTexts.getPlayerTurnOptionsText();
       }
       return reply;
 
@@ -158,51 +159,5 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener {
     this.games.set(chat.id, game);
     game.subscribe(this);
     return game;
-  }
-
-  private getNextPlayerTurnMessage(player: Player, game: BlackjackGame): string {
-    const playerName = this.formatPlayerName(player);
-    const playerCardsText = this.cardsAsString(player);
-    let msg = `❕ It's now ${playerName}'s turn. They are showing ${playerCardsText}`;
-    if (!player.isDealer) {
-      msg += this.getPlayerTurnOptionsText();
-    }
-    return msg;
-  }
-
-  private getWinnerListText(winners: Player[]): string {
-    if (winners.length === 0) {
-      return "No one beat the dealer 😞";
-    }
-    const winnersList = winners.map((winner) => `@${winner.user.name}`).join(", ");
-    return `${winnersList} beat the dealer 🤑`;
-  }
-
-  private cardsAsString(player: Player): string {
-    let cardsString = `${player.cards.map((card) => card.toString()).join(" , ")}.`;
-    cardsString += this.handValuesAsString(player);
-    return cardsString;
-  }
-
-  private handValuesAsString(player: Player): string {
-    if (!player.isBusted) {
-      return `   (${player.nonBustedHandValues.map((value) => value.toString()).join(" or ")})`;
-    }
-    if (!player.isDealer) {
-      return ` @${player.name} busted.`;
-    } else {
-      return " The dealer busted.";
-    }
-  }
-
-  private formatPlayerName(player: Player): string {
-    if (!player.isDealer) {
-      return `@${player.name}`;
-    }
-    return player.name;
-  }
-
-  private getPlayerTurnOptionsText(): string {
-    return `\n\nDo you want to /${Plugin.HIT_CMD}, or /${Plugin.STAND_CMD}?`;
   }
 }

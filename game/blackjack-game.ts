@@ -4,6 +4,7 @@ import { Card } from "../card/card";
 import { Deck } from "../deck/deck";
 import { Player } from "../player/player";
 import { IBlackjackGameListener } from "./blackjack-game-listener";
+import { GameConclusion } from "./game-conclusion";
 import { GameState } from "./game-state";
 
 /**
@@ -12,7 +13,10 @@ import { GameState } from "./game-state";
 export class BlackjackGame {
 
     private static readonly MAX_PLAYERS = 3;
+
+    private static readonly BET_MULTIPLIER_ON_EVEN = 1;
     private static readonly BET_MULTIPLIER_ON_WIN = 2;
+    private static readonly BET_MULTIPLIER_ON_BLACKJACK = 2.5;
 
     private static readonly TIME_WAIT_FOR_PLAYERS_MS = 15000;
     private static readonly TIME_PLAYER_TURN_MS = 15000;
@@ -146,8 +150,9 @@ export class BlackjackGame {
     private dealCards(): void {
         this.gameState = GameState.DEALING_CARDS;
         this.deck.shuffle();
+        this.myPlayers.forEach((player) => player.giveCards(this.deck.drawCard()));
         this.dealer.giveCards(this.deck.drawCard());
-        this.myPlayers.forEach((player) => player.giveCards(this.deck.drawCard(), this.deck.drawCard()));
+        this.myPlayers.forEach((player) => player.giveCards(this.deck.drawCard()));
         this.gameState = GameState.PLAYER_TURNS;
         const currentPlayer = this.startNextPlayerTurn();
         this.listeners.forEach((listener) => listener.onCardsDealt(this, this.dealer, currentPlayer));
@@ -165,10 +170,12 @@ export class BlackjackGame {
 
     private startNextPlayerTurn(): Player {
         this.playerTurnIndex++;
-        const currentPlayer = this.currentPlayer;
+        let currentPlayer = this.currentPlayer;
 
         if (currentPlayer === this.dealer) {
             this.scheduleDealerTurn();
+        } else if (!currentPlayer.mayDrawCard) {
+            currentPlayer = this.startNextPlayerTurn();
         } else {
             this.schedulePlayerTurnTimeout();
         }
@@ -181,47 +188,75 @@ export class BlackjackGame {
 
     private async executeDealerTurn(): Promise<void> {
         this.gameState = GameState.DEALER_TURN;
-        const nonBustedPlayers = this.getNonBustedPlayers();
 
-        if (nonBustedPlayers.length === 0) {
-            this.listeners.forEach((listener) => listener.onGameEnded(this, [], false));
-            this.gameState = GameState.ENDED;
-            return;
-        }
-
-        while (!this.dealer.isBusted && !this.dealer.hasReachedDealerMinimum) {
-            const newCard = this.deck.drawCard();
-            this.dealer.giveCards(newCard);
-            this.listeners.forEach((listener) => listener.onDealerDrewCard(this, this.dealer, newCard));
-            await this.asyncSleep(BlackjackGame.TIME_BETWEEN_ACTIONS);
-        }
-
-        let winners: Player[];
-        if (this.dealer.isBusted) {
-            winners = nonBustedPlayers;
-        } else {
-            winners = this.getPlayersWithWinningHands(nonBustedPlayers);
+        if (this.thereAreNonBustedPlayersWithoutBlackjack()) {
+            while (!this.dealer.isBusted && !this.dealer.hasReachedDealerMinimum) {
+                const newCard = this.deck.drawCard();
+                this.dealer.giveCards(newCard);
+                this.listeners.forEach((listener) => listener.onDealerDrewCard(this, this.dealer, newCard));
+                await this.asyncSleep(BlackjackGame.TIME_BETWEEN_ACTIONS);
+            }
         }
 
         this.gameState = GameState.ENDED;
-        this.rewardWinners(winners);
-        this.listeners.forEach((listener) => listener.onGameEnded(this, winners, this.dealer.isBusted));
+        const conclusion = this.getGameConclusion();
+        this.rewardPlayersOnGameConclusion(conclusion);
+        this.listeners.forEach((listener) => listener.onGameEnded(this, conclusion));
     }
 
-    private getNonBustedPlayers(): Player[] {
-        return this.myPlayers.filter((player) => !player.isBusted);
+    private getGameConclusion(): GameConclusion {
+        const bustedPlayers = this.getBustedPlayers();
+        const lowerScoreThanDealerPlayers = this.getPlayersWithLowerScoreThanDealer();
+        const sameScoreAsDealerPlayers = this.getPlayersWithSameScoreAsDealer();
+        const higherScoreThanDealerPlayers = this.getPlayersWithHigherScoreThanDealer();
+        const playersWithBlackjack = this.getPlayersWithBlackjack();
+
+        return new GameConclusion(
+            this.dealer.isBusted,
+            bustedPlayers,
+            lowerScoreThanDealerPlayers,
+            sameScoreAsDealerPlayers,
+            higherScoreThanDealerPlayers,
+            playersWithBlackjack);
     }
 
-    private getPlayersWithWinningHands(unbustedPlayers: Player[]): Player[] {
-        const winners = unbustedPlayers
-            .filter((player) => player.highestNonBustedHandValue > this.dealer.highestNonBustedHandValue);
-        return winners;
+    private thereAreNonBustedPlayersWithoutBlackjack(): boolean {
+        return this.myPlayers.findIndex((player) => !player.isBusted && !player.hasBlackjack) !== -1;
     }
 
-    private rewardWinners(winners: Player[]): void {
-        winners.forEach((winner) => {
-            winner.user.addToScore(winner.bet * BlackjackGame.BET_MULTIPLIER_ON_WIN);
-        });
+    private getBustedPlayers(): Player[] {
+        return this.myPlayers.filter((player) => player.isBusted);
+    }
+
+    private getPlayersWithLowerScoreThanDealer(): Player[] {
+        return this.myPlayers.filter((player) =>
+            !player.isBusted && player.highestNonBustedHandValue < this.dealer.highestNonBustedHandValue);
+    }
+
+    private getPlayersWithSameScoreAsDealer(): Player[] {
+        return this.myPlayers.filter((player) =>
+            !player.isBusted && !player.hasBlackjack &&
+            player.highestNonBustedHandValue === this.dealer.highestNonBustedHandValue);
+    }
+
+    private getPlayersWithHigherScoreThanDealer(): Player[] {
+        return this.myPlayers.filter((player) =>
+            player.highestNonBustedHandValue > this.dealer.highestNonBustedHandValue
+            && !player.isBusted && !player.hasBlackjack);
+    }
+
+    private getPlayersWithBlackjack(): Player[] {
+        return this.myPlayers.filter((player) => player.hasBlackjack);
+    }
+
+    private rewardPlayersOnGameConclusion(conclusion: GameConclusion): void {
+        this.rewardPlayers(conclusion.playersWithBlackjack, BlackjackGame.BET_MULTIPLIER_ON_BLACKJACK);
+        this.rewardPlayers(conclusion.higherScoreThanDealerPlayers, BlackjackGame.BET_MULTIPLIER_ON_WIN);
+        this.rewardPlayers(conclusion.sameScoreAsDealerPlayers, BlackjackGame.BET_MULTIPLIER_ON_EVEN);
+    }
+
+    private rewardPlayers(players: Player[], multiplier: number) {
+        players.forEach((player) => player.user.addToScore(Math.floor(player.bet * multiplier)));
     }
 
     private get currentPlayer(): Player {

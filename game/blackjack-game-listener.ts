@@ -1,6 +1,7 @@
 import { Card } from "../card/card";
 import { Player } from "../player/player";
 import { BlackjackGame } from "./blackjack-game";
+import { GameConclusion } from "./game-conclusion";
 
 /**
  * Listener to Blackjack game events.
@@ -36,8 +37,7 @@ export interface IBlackjackGameListener {
     /**
      * Called when the game has ended.
      * @param game The game.
-     * @param winners The players that won and thus were rewarded.
-     * @param dealerBusted Whether the dealer went bust.
+     * @param conclusion The game conclusion.
      */
-    onGameEnded(game: BlackjackGame, winners: Player[], dealerBusted: boolean): void;
+    onGameEnded(game: BlackjackGame, conclusion: GameConclusion): void;
 }
