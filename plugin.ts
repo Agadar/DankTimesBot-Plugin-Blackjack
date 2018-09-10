@@ -17,6 +17,8 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener {
   private static readonly STAND_CMD = "stand";
   private static readonly HIT_CMD = "hit";
 
+  private static readonly ALL_IN_TEXT = "all";
+
   private readonly deckFactory = new DeckFactory();
   private readonly pluginTexts = new PluginTexts(Plugin.HIT_CMD, Plugin.STAND_CMD);
   private readonly games = new Map<number, BlackjackGame>();
@@ -95,9 +97,13 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener {
       return "⚠️ Not enough arguments! Format: /bet [value]";
     }
 
-    const bet = Number(split[1]);
+    let bet = Number(split[1]);
     if (isNaN(bet)) {
-      return "⚠️ Your bet has to be a numeric value, smartass.";
+      if (split[1] === Plugin.ALL_IN_TEXT) {
+        bet = user.score;
+      } else {
+        return "⚠️ Your bet has to be a numeric value, smartass.";
+      }
     }
 
     let game: BlackjackGame;
