@@ -13,9 +13,9 @@ import { PluginTexts } from "./util/plugin-texts";
 export class Plugin extends AbstractPlugin implements IBlackjackGameListener {
 
   private static readonly INFO_CMD = "blackjack";
-  private static readonly BET_CMD = "bet";
-  private static readonly STAND_CMD = "stand";
-  private static readonly HIT_CMD = "hit";
+  private static readonly BET_CMD = `${Plugin.INFO_CMD}_bet`;
+  private static readonly STAND_CMD = `${Plugin.INFO_CMD}_stand`;
+  private static readonly HIT_CMD = `${Plugin.INFO_CMD}_hit`;
 
   private static readonly ALL_IN_TEXT = "all";
 
