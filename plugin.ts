@@ -94,7 +94,7 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener {
 
     const split = msg.text.split(" ");
     if (split.length < 2) {
-      return "⚠️ Not enough arguments! Format: /bet [value]";
+      return `⚠️ Not enough arguments! Format: /${Plugin.BET_CMD} [value]`;
     }
 
     let bet = Number(split[1]);
