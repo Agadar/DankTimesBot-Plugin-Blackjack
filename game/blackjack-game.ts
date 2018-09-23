@@ -1,11 +1,11 @@
 import { Chat } from "../../../src/chat/chat";
 import { User } from "../../../src/chat/user/user";
-import { Card } from "../card/card";
 import { Deck } from "../deck/deck";
 import { Player } from "../player/player";
 import { IBlackjackGameListener } from "./blackjack-game-listener";
 import { GameConclusion } from "./game-conclusion";
 import { GameState } from "./game-state";
+import { HitResult } from "./hit-result";
 
 /**
  * An on-going game of Blackjack.
@@ -24,7 +24,7 @@ export class BlackjackGame {
 
     private readonly dealer = new Player();
     private readonly myPlayers = new Array<Player>();
-    private readonly listeners = new Array<IBlackjackGameListener>();
+    private readonly listeners = new Array<IBlackjackGameListener<BlackjackGame>>();
 
     private gameState = GameState.INITIALIZING;
     private playerTurnIndex = -1;
@@ -46,23 +46,31 @@ export class BlackjackGame {
      * Subscribes to this blackjack game to receive asynchronous updates.
      * @param subscriber The component subscribing to this game.
      */
-    public subscribe(subscriber: IBlackjackGameListener) {
+    public subscribe(subscriber: IBlackjackGameListener<BlackjackGame>) {
         if (this.listeners.indexOf(subscriber) === -1) {
             this.listeners.push(subscriber);
         }
     }
 
     /**
-     * Gets this game's players.
+     * This game's players.
      */
     public get players(): Player[] {
         return this.myPlayers.slice(0, this.myPlayers.length);
     }
 
     /**
+     * Whether this game is (still) joinable.
+     */
+    public get isJoinable(): boolean {
+        return this.gameState === GameState.INITIALIZING || this.gameState === GameState.AWAITING_PLAYERS;
+    }
+
+    /**
      * Initializes this game, starting a timer during which players can join
      * the game. After the timer, the game starts.
      * @return The number of seconds before the game starts.
+     * @throws An error if the game was already initialized.
      */
     public initializeGame(): number {
         if (this.gameState !== GameState.INITIALIZING) {
@@ -82,7 +90,7 @@ export class BlackjackGame {
      * points to pay their bet, if the bet is incorrect, or if joining is no longer possible.
      */
     public joinGame(user: User, bet: number): void {
-        if (this.gameState !== GameState.INITIALIZING && this.gameState !== GameState.AWAITING_PLAYERS) {
+        if (!this.isJoinable) {
             throw new Error("The game has already started!");
         }
         if (this.myPlayers.length >= BlackjackGame.MAX_PLAYERS) {
@@ -120,13 +128,10 @@ export class BlackjackGame {
     /**
      * Instructs the dealer the user desires to hit.
      * @param userId The id of the user desiring to hit.
-     * @return Information about the hit results, including the drawn card,
-     * whether the player is busted, which player had the card drawn, and
-     * which player is up next (which is the current player if they weren't busted,
-     * and can also be the dealer).
+     * @return Information about the hit results.
      * @throws Error if it is not the user's turn.
      */
-    public hit(userId: number): { card: Card, currentPlayer: Player, nextPlayer: Player } {
+    public hit(userId: number): HitResult {
         if (this.gameState !== GameState.PLAYER_TURNS) { throw new Error("It is not your turn!"); }
         const theCurrentPlayer = this.currentPlayer;
         if (theCurrentPlayer === this.dealer || theCurrentPlayer.user.id !== userId) {
