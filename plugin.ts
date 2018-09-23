@@ -16,6 +16,7 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
   private static readonly BET_CMD = `${Plugin.INFO_CMD}_bet`;
   private static readonly STAND_CMD = `${Plugin.INFO_CMD}_stand`;
   private static readonly HIT_CMD = `${Plugin.INFO_CMD}_hit`;
+  private static readonly STATISTICS_CMD = `${Plugin.INFO_CMD}_stats`;
 
   private static readonly ALL_IN_TEXT = "all";
 
@@ -36,7 +37,8 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
     const betCmd = new BotCommand(Plugin.BET_CMD, "", this.bet.bind(this), false);
     const standCmd = new BotCommand(Plugin.STAND_CMD, "", this.stand.bind(this), false);
     const hitCmd = new BotCommand(Plugin.HIT_CMD, "", this.hit.bind(this), false);
-    return [infoCmd, betCmd, standCmd, hitCmd];
+    const statisticsCmd = new BotCommand(Plugin.STATISTICS_CMD, "", this.statistics.bind(this), false);
+    return [infoCmd, betCmd, standCmd, hitCmd, statisticsCmd];
   }
 
   /**
@@ -86,7 +88,8 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
     return "♣️♥ It's basic Blackjack ♠️️♦️\n\n"
       + `/${Plugin.BET_CMD} to start or join a game with a specified bet\n`
       + `/${Plugin.STAND_CMD} to take no more cards (when it's your turn)\n`
-      + `/${Plugin.HIT_CMD} to take another card (when it's your turn)`;
+      + `/${Plugin.HIT_CMD} to take another card (when it's your turn)\n`
+      + `/${Plugin.STATISTICS_CMD} to see some statistics of this chat`;
   }
 
   private bet(chat: Chat, user: User, msg: any, match: string[]): string {
@@ -151,6 +154,11 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
     } catch (ex) {
       // Silent ignore.
     }
+  }
+
+  private statistics(chat: Chat, user: User, msg: any, match: string[]): string {
+    const gameManager = this.getOrCreateGameManager(chat);
+    return gameManager.formattedStatisticsText;
   }
 
   private getOrCreateGameManager(chat: Chat): ChatGameManager {

@@ -8,6 +8,7 @@ import { IBlackjackGameListener } from "../game/blackjack-game-listener";
 import { GameConclusion } from "../game/game-conclusion";
 import { HitResult } from "../game/hit-result";
 import { Player } from "../player/player";
+import { ChatStatistics } from "./chat-statistics";
 
 /**
  * Manages the blackjack game(s) of a single chat.
@@ -21,6 +22,7 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
     private static readonly BET_MULTIPLIER_ON_BLACKJACK = 2.5;
 
     private readonly listeners = new Array<IBlackjackGameListener<ChatGameManager>>();
+    private readonly statistics = new ChatStatistics();
 
     private game: BlackjackGame = null;
 
@@ -47,6 +49,7 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
         this.createGame(player);
         const secondsBeforeStart = this.game.initializeGame();
         player.confiscateBet();
+        this.statistics.updateDealerBalance(bet);
         return secondsBeforeStart;
     }
 
@@ -62,6 +65,7 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
         const player = this.createPlayerFromUser(user, bet);
         this.game.joinGame(player);
         player.confiscateBet();
+        this.statistics.updateDealerBalance(bet);
     }
 
     /**
@@ -117,6 +121,13 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
      */
     public get gameIsRunning(): boolean {
         return this.game !== null;
+    }
+
+    /**
+     * A formatted text representation of the chat's Blackjack statistics.
+     */
+    public get formattedStatisticsText(): string {
+        return this.statistics.formattedText;
     }
 
     /**
@@ -180,6 +191,9 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
     }
 
     private rewardPlayers(players: Player[], multiplier: number) {
-        players.forEach((player) => player.rewardPlayer(multiplier));
+        players.forEach((player) => {
+            const awarded = player.rewardPlayer(multiplier);
+            this.statistics.updateDealerBalance(-awarded);
+        });
     }
 }
