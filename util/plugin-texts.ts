@@ -15,7 +15,7 @@ export class PluginTexts {
 
     public getNextPlayerTurnMessage(player: Player): string {
         const playerCardsText = this.cardsAsString(player);
-        let msg = `❕ ${player.name} is up next. They are showing ${playerCardsText}`;
+        let msg = `❕ ${player.formattedName} is up next. They are showing ${playerCardsText}`;
         if (!player.isDealer) {
             msg += this.getPlayerTurnOptionsText();
         }
@@ -37,9 +37,9 @@ export class PluginTexts {
     public getCardsDealtPlayerTextLine(player: Player): string {
         let text: string;
         if (player.hasBlackjack) {
-            text = `${player.name} has blackjack! They are showing`;
+            text = `${player.formattedName} has blackjack! They are showing`;
         } else {
-            text = `${player.name} is showing`;
+            text = `${player.formattedName} is showing`;
         }
         return `${text} ${this.cardsAsString(player)}`;
     }
@@ -48,7 +48,7 @@ export class PluginTexts {
         if (!player.isBusted) {
             return `   (${player.nonBustedHandValues.map((value) => value.toString()).join(" or ")})`;
         }
-        return ` ${player.name} busted.`;
+        return ` ${player.formattedName} busted.`;
     }
 
     public getPlayerTurnOptionsText(): string {
@@ -63,6 +63,6 @@ export class PluginTexts {
 
     private getPlayerResultList(players: Player[], result: string) {
         if (players.length === 0) { return ""; }
-        return `${players.map((player) => player.name).join(", ")} ${result}`;
+        return `${players.map((player) => player.formattedName).join(", ")} ${result}`;
     }
 }

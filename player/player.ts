@@ -1,4 +1,3 @@
-import { User } from "../../../src/chat/user/user";
 import { Card } from "../card/card";
 import { Rank } from "../card/rank";
 import { RANK_VALUES } from "../card/rankValues";
@@ -11,6 +10,9 @@ export class Player {
     private static readonly MAX_HAND_VALUE = 21;
     private static readonly DEALER_MIN_GOAL = 17;
 
+    private static readonly DEALER_IDENTIFIER = -1;
+    private static readonly DEALER_NAME = "The dealer";
+
     private readonly mycards = new Array<Card>();
 
     private myHasBlackjack = false;
@@ -20,11 +22,28 @@ export class Player {
 
     /**
      * Initializes a new player.
-     * @param user The user behind the player. If not supplied, this player
+     * @param identifier A unique identifier for this player. If -1, this player
      * is assumed to be the dealer.
-     * @param bet The original bet of the player.
+     * @param name The name of this player. If not supplied, falls back to a default
+     * dealer name.
+     * @param bet The original bet of the player. Does not have to be supplied if this
+     * player is the dealer (as it will be ignored anyway).
+     * @param updateScoreFunction The function to use for updating the score, which is
+     * used for subtracting the original bet from the player as well as for rewarding them
+     * if they won a round. Does not have to be supplied if this player is the dealer
+     * (as it will be ignored anyway).
+     * @throws An error if the bet is incorrect.
      */
-    constructor(public readonly user?: User, public readonly bet?: number) { }
+    constructor(
+        public readonly identifier = Player.DEALER_IDENTIFIER,
+        private readonly name = Player.DEALER_NAME,
+        private readonly bet = 0,
+        private readonly updateScoreFunction: ((points: number) => void) = ((points) => void (0))) {
+
+        if (!this.isDealer && (bet < 1 || bet % 1 !== 0)) {
+            throw new Error("Your bet must be a whole, positive number!");
+        }
+    }
 
     /**
      * Gives the specified playing cards to this player.
@@ -89,18 +108,18 @@ export class Player {
     /**
      * Gets this player's formatted name.
      */
-    public get name(): string {
-        if (this.user) {
-            return `@${this.user.name}`;
+    public get formattedName(): string {
+        if (!this.isDealer) {
+            return `@${this.name}`;
         }
-        return "The dealer";
+        return this.name;
     }
 
     /**
      * Gets whether this player is the dealer.
      */
     public get isDealer(): boolean {
-        return this.user === undefined || this.user === null;
+        return this.identifier === Player.DEALER_IDENTIFIER;
     }
 
     /**
@@ -109,6 +128,30 @@ export class Player {
      */
     public get mayDrawCard(): boolean {
         return !this.isBusted && !this.hasBlackjack;
+    }
+
+    /**
+     * Confiscates the bet from the player. Assumed to be done sometime
+     * before the start of the game of blackjack.
+     */
+    public confiscateBet(): void {
+        if (!this.isDealer) {
+            this.updateScoreFunction(-this.bet);
+        }
+    }
+
+    /**
+     * Rewards the player, using the supplied multiplier for their bet.
+     * @param multiplier The multiplier to use.
+     * @returns The amount with which the player was rewarded.
+     */
+    public rewardPlayer(multiplier: number): number {
+        let reward = 0;
+        if (!this.isDealer) {
+            reward = Math.floor(this.bet * multiplier);
+            this.updateScoreFunction(reward);
+        }
+        return reward;
     }
 
     private calculatePossibleHandValues(): number[] {

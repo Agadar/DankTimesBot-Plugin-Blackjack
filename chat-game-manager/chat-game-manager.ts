@@ -1,5 +1,6 @@
 import { Chat } from "../../../src/chat/chat";
 import { User } from "../../../src/chat/user/user";
+
 import { Card } from "../card/card";
 import { DeckFactory } from "../deck/deckFactory";
 import { BlackjackGame } from "../game/blackjack-game";
@@ -14,6 +15,10 @@ import { Player } from "../player/player";
 export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
 
     private static readonly NO_GAME_RUNNING_TEXT = "There's no game running!";
+
+    private static readonly BET_MULTIPLIER_ON_EVEN = 1;
+    private static readonly BET_MULTIPLIER_ON_WIN = 2;
+    private static readonly BET_MULTIPLIER_ON_BLACKJACK = 2.5;
 
     private readonly listeners = new Array<IBlackjackGameListener<ChatGameManager>>();
 
@@ -38,8 +43,11 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
         if (this.gameIsRunning) {
             throw new Error("There's already a game ongoing!");
         }
-        this.createGame(user, bet);
-        return this.game.initializeGame();
+        const player = this.createPlayerFromUser(user, bet);
+        this.createGame(player);
+        const secondsBeforeStart = this.game.initializeGame();
+        player.confiscateBet();
+        return secondsBeforeStart;
     }
 
     /**
@@ -51,7 +59,9 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
         if (!this.gameIsRunning) {
             throw new Error(ChatGameManager.NO_GAME_RUNNING_TEXT);
         }
-        this.game.joinGame(user, bet);
+        const player = this.createPlayerFromUser(user, bet);
+        this.game.joinGame(player);
+        player.confiscateBet();
     }
 
     /**
@@ -144,13 +154,32 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
      * @implements IBlackjackGameListener
      */
     public onGameEnded(source: BlackjackGame, conclusion: GameConclusion): void {
-        this.listeners.forEach((listener) => listener.onGameEnded(this, conclusion));
+        this.rewardPlayersOnGameConclusion(conclusion);
         this.game = null;
+        this.listeners.forEach((listener) => listener.onGameEnded(this, conclusion));
     }
 
-    private createGame(user: User, bet: number): void {
+    private createGame(player: Player): void {
         const deck = this.deckFactory.createDeck();
-        this.game = new BlackjackGame(deck, this.chat, user, bet);
+        this.game = new BlackjackGame(deck, player);
         this.game.subscribe(this);
+    }
+
+    private createPlayerFromUser(user: User, bet: number): Player {
+        if (user.score < bet) {
+            throw new Error("You don't have enough points to make that bet!");
+        }
+        const rewardFunction = user.addToScore.bind(user);
+        return new Player(user.id, user.name, bet, rewardFunction);
+    }
+
+    private rewardPlayersOnGameConclusion(conclusion: GameConclusion): void {
+        this.rewardPlayers(conclusion.playersWithBlackjack, ChatGameManager.BET_MULTIPLIER_ON_BLACKJACK);
+        this.rewardPlayers(conclusion.higherScoreThanDealerPlayers, ChatGameManager.BET_MULTIPLIER_ON_WIN);
+        this.rewardPlayers(conclusion.sameScoreAsDealerPlayers, ChatGameManager.BET_MULTIPLIER_ON_EVEN);
+    }
+
+    private rewardPlayers(players: Player[], multiplier: number) {
+        players.forEach((player) => player.rewardPlayer(multiplier));
     }
 }

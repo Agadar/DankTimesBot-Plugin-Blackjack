@@ -1,5 +1,3 @@
-import { Chat } from "../../../src/chat/chat";
-import { User } from "../../../src/chat/user/user";
 import { Deck } from "../deck/deck";
 import { Player } from "../player/player";
 import { IBlackjackGameListener } from "./blackjack-game-listener";
@@ -13,10 +11,6 @@ import { HitResult } from "./hit-result";
 export class BlackjackGame {
 
     private static readonly MAX_PLAYERS = 3;
-
-    private static readonly BET_MULTIPLIER_ON_EVEN = 1;
-    private static readonly BET_MULTIPLIER_ON_WIN = 2;
-    private static readonly BET_MULTIPLIER_ON_BLACKJACK = 2.5;
 
     private static readonly TIME_WAIT_FOR_PLAYERS_MS = 15000;
     private static readonly TIME_PLAYER_TURN_MS = 15000;
@@ -32,14 +26,11 @@ export class BlackjackGame {
 
     /**
      * Initializes a new game.
-     * @param deck The initial deck to start with.
-     * @param chat The chat the game is taking place in.
-     * @param user The user that started the game.
-     * @param bet The user's bet.
+     * @param player The player that is joining.
      * @throws See #joinGame.
      */
-    constructor(private readonly deck: Deck, public readonly chat: Chat, user: User, bet: number) {
-        this.joinGame(user, bet);
+    constructor(private readonly deck: Deck, player: Player) {
+        this.joinGame(player);
     }
 
     /**
@@ -63,7 +54,8 @@ export class BlackjackGame {
      * Whether this game is (still) joinable.
      */
     public get isJoinable(): boolean {
-        return this.gameState === GameState.INITIALIZING || this.gameState === GameState.AWAITING_PLAYERS;
+        return (this.gameState === GameState.INITIALIZING || this.gameState === GameState.AWAITING_PLAYERS)
+            && this.myPlayers.length < BlackjackGame.MAX_PLAYERS;
     }
 
     /**
@@ -83,58 +75,44 @@ export class BlackjackGame {
 
     /**
      * Joins this game of blackjack.
-     * @param user The user that is joining.
-     * @param bet The user's bet.
+     * @param player The player that is joining.
      * @throws An error if the maximum number of players has already been reached,
-     * if the player is already partaking, if the player does not have enough
-     * points to pay their bet, if the bet is incorrect, or if joining is no longer possible.
+     * if the player is already partaking, or if joining is no longer possible.
      */
-    public joinGame(user: User, bet: number): void {
+    public joinGame(player: Player): void {
         if (!this.isJoinable) {
-            throw new Error("The game has already started!");
+            throw new Error("It's no longer possible to join the game!");
         }
-        if (this.myPlayers.length >= BlackjackGame.MAX_PLAYERS) {
-            throw new Error(`Only up to ${BlackjackGame.MAX_PLAYERS} players can join a game at a time!`);
-        }
-        if (this.myPlayers.findIndex((entry) => entry.user.id === user.id) !== -1) {
+        if (this.myPlayers.findIndex((entry) => entry.identifier === player.identifier) !== -1) {
             throw new Error("You're already partaking in this game!");
         }
-        if (user.score < bet) {
-            throw new Error("You don't have enough points to make that bet!");
-        }
-        if (bet < 1 || bet % 1 !== 0) {
-            throw new Error("Your bet must be a whole, positive number!");
-        }
-        user.addToScore(-bet);
-        const player = new Player(user, bet);
         this.myPlayers.push(player);
     }
 
     /**
-     * If it is the user's turn, instructs the dealer they desire to stand.
-     * @param userId The id of the user desiring to stand.
+     * If it is the turn of the player that has the supplied identifier, instructs the dealer they desire to stand.
+     * @param identifier The identifier of the player desiring to stand.
      * @return The player that is next, which can also be the dealer.
-     * @throws Error if it is not the user's turn.
+     * @throws Error if it is not the player's turn.
      */
-    public stand(userId: number): Player {
+    public stand(identifier: number): Player {
         if (this.gameState !== GameState.PLAYER_TURNS) { throw new Error("It is not your turn!"); }
         const currentPlayer = this.currentPlayer;
-        if (currentPlayer === this.dealer ||
-            currentPlayer.user.id !== userId) { throw new Error("It is not your turn!"); }
+        if (currentPlayer.identifier !== identifier) { throw new Error("It is not your turn!"); }
         clearTimeout(this.playerTurnTimeoutId);
         return this.startNextPlayerTurn();
     }
 
     /**
-     * Instructs the dealer the user desires to hit.
-     * @param userId The id of the user desiring to hit.
+     * If it is the turn of the player that has the supplied identifier, instructs the dealer they desire to stand.
+     * @param identifier The identifier of the player desiring to stand.
      * @return Information about the hit results.
-     * @throws Error if it is not the user's turn.
+     * @throws Error if it is not the player's turn.
      */
-    public hit(userId: number): HitResult {
+    public hit(identifier: number): HitResult {
         if (this.gameState !== GameState.PLAYER_TURNS) { throw new Error("It is not your turn!"); }
         const theCurrentPlayer = this.currentPlayer;
-        if (theCurrentPlayer === this.dealer || theCurrentPlayer.user.id !== userId) {
+        if (theCurrentPlayer.identifier !== identifier) {
             throw new Error("It is not your turn!");
         }
         clearTimeout(this.playerTurnTimeoutId);
@@ -205,7 +183,6 @@ export class BlackjackGame {
 
         this.gameState = GameState.ENDED;
         const conclusion = this.getGameConclusion();
-        this.rewardPlayersOnGameConclusion(conclusion);
         this.listeners.forEach((listener) => listener.onGameEnded(this, conclusion));
     }
 
@@ -252,16 +229,6 @@ export class BlackjackGame {
 
     private getPlayersWithBlackjack(): Player[] {
         return this.myPlayers.filter((player) => player.hasBlackjack);
-    }
-
-    private rewardPlayersOnGameConclusion(conclusion: GameConclusion): void {
-        this.rewardPlayers(conclusion.playersWithBlackjack, BlackjackGame.BET_MULTIPLIER_ON_BLACKJACK);
-        this.rewardPlayers(conclusion.higherScoreThanDealerPlayers, BlackjackGame.BET_MULTIPLIER_ON_WIN);
-        this.rewardPlayers(conclusion.sameScoreAsDealerPlayers, BlackjackGame.BET_MULTIPLIER_ON_EVEN);
-    }
-
-    private rewardPlayers(players: Player[], multiplier: number) {
-        players.forEach((player) => player.user.addToScore(Math.floor(player.bet * multiplier)));
     }
 
     private get currentPlayer(): Player {

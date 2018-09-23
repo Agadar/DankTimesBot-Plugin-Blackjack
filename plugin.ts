@@ -78,7 +78,7 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
    */
   public onPlayerTurnTimedOut(source: ChatGameManager, timedOutPlayer: Player, nextPlayer: Player) {
     const playerTurnMsg = this.pluginTexts.getNextPlayerTurnMessage(nextPlayer);
-    const message = `${timedOutPlayer.name} took too long to decide.\n\n${playerTurnMsg}`;
+    const message = `${timedOutPlayer.formattedName} took too long to decide.\n\n${playerTurnMsg}`;
     this.sendMessage(source.chatId, message);
   }
 
@@ -137,7 +137,7 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
     const gameManager = this.getOrCreateGameManager(chat);
     try {
       const info = gameManager.hit(user.id);
-      let reply = `The dealer deals ${info.currentPlayer.name} ${info.card.toString()}.`;
+      let reply = `The dealer deals ${info.currentPlayer.formattedName} ${info.card.toString()}.`;
       reply += this.pluginTexts.handValuesAsString(info.currentPlayer);
 
       if (info.currentPlayer.isBusted) {
