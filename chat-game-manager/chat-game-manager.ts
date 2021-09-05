@@ -1,3 +1,4 @@
+import { AlterUserScoreArgs } from "../../../src/chat/alter-user-score-args";
 import { Chat } from "../../../src/chat/chat";
 import { User } from "../../../src/chat/user/user";
 
@@ -30,10 +31,12 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
      * Constructor.
      * @param deckFactory The deck factory to use for generating decks.
      * @param chat The chat for which this manager manages blackjack games.
+     * @param pluginName Name of this plugin.
      */
     constructor(
         private readonly deckFactory: DeckFactory,
-        private readonly chat: Chat) { }
+        private readonly chat: Chat,
+        private readonly pluginName: string) { }
 
     /**
      * Starts a new game, if possible.
@@ -180,7 +183,10 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
         if (user.score < bet) {
             throw new Error("You don't have enough points to make that bet!");
         }
-        const rewardFunction = user.addToScore.bind(user);
+        const rewardFunction = (points: number, reason: string) => {
+            const scoreArgs = new AlterUserScoreArgs(user, points, this.pluginName, reason);
+            this.chat.alterUserScore(scoreArgs);
+        };
         return new Player(user.id, user.name, bet, rewardFunction);
     }
 

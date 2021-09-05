@@ -13,19 +13,19 @@ import { PluginTexts } from "./util/plugin-texts";
 export class Plugin extends AbstractPlugin implements IBlackjackGameListener<ChatGameManager> {
 
   private static readonly INFO_CMD = "blackjack";
-  private static readonly BET_CMD = `${Plugin.INFO_CMD}_bet`;
-  private static readonly STAND_CMD = `${Plugin.INFO_CMD}_stand`;
-  private static readonly HIT_CMD = `${Plugin.INFO_CMD}_hit`;
-  private static readonly STATISTICS_CMD = `${Plugin.INFO_CMD}_stats`;
+  private static readonly BET_CMD = `bjbet`;
+  private static readonly STAND_CMD = `bjstand`;
+  private static readonly HIT_CMD = `bjhit`;
+  private static readonly STATISTICS_CMD = `bjstats`;
 
-  private static readonly ALL_IN_TEXT = "all";
+  private static readonly ALL_IN_TEXTS = ["all", "allin", "all-in", "all in"];
 
   private readonly deckFactory = new DeckFactory();
   private readonly pluginTexts = new PluginTexts(Plugin.HIT_CMD, Plugin.STAND_CMD);
   private readonly gameManagers = new Map<number, ChatGameManager>();
 
   constructor() {
-    super("Blackjack", "1.0.0");
+    super("Blackjack", "1.1.0-alpha");
   }
 
   /**
@@ -93,21 +93,21 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
   }
 
   private bet(chat: Chat, user: User, msg: any, match: string[]): string {
+    const split: string[] = msg.text.split(" ");
 
-    const split = msg.text.split(" ");
     if (split.length < 2) {
       return `⚠️ Not enough arguments! Format: /${Plugin.BET_CMD} [value]`;
     }
+    const betArgs = split.slice(1);
+    let bet = Number(betArgs[0]);
 
-    let bet = Number(split[1]);
     if (isNaN(bet)) {
-      if (split[1] === Plugin.ALL_IN_TEXT) {
+      if (Plugin.ALL_IN_TEXTS.includes(betArgs.join(" "))) {
         bet = user.score;
       } else {
         return "⚠️ Your bet has to be a numeric value, smartass.";
       }
     }
-
     const gameManager = this.getOrCreateGameManager(chat);
     let reply: string;
 
@@ -132,7 +132,7 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
       const nextPlayer = gameManager.stand(user.id);
       return this.pluginTexts.getNextPlayerTurnMessage(nextPlayer);
     } catch (ex) {
-      // Silent ignore.
+      console.error(ex);
     }
   }
 
@@ -152,7 +152,7 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
       return reply;
 
     } catch (ex) {
-      // Silent ignore.
+      console.error(ex);
     }
   }
 
@@ -164,7 +164,7 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
   private getOrCreateGameManager(chat: Chat): ChatGameManager {
     let manager = this.gameManagers.get(chat.id);
     if (!manager) {
-      manager = new ChatGameManager(this.deckFactory, chat);
+      manager = new ChatGameManager(this.deckFactory, chat, this.name);
       this.gameManagers.set(chat.id, manager);
       manager.subscribe(this);
     }

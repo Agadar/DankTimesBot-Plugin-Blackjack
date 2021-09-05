@@ -13,6 +13,9 @@ export class Player {
     private static readonly DEALER_IDENTIFIER = -1;
     private static readonly DEALER_NAME = "The dealer";
 
+    private static readonly BET_CONFISCATION_REASON = "bet.confiscation";
+    private static readonly WINNER_REWARD_REASON = "winner.reward";
+
     private readonly mycards = new Array<Card>();
 
     private myHasBlackjack = false;
@@ -38,7 +41,7 @@ export class Player {
         public readonly identifier = Player.DEALER_IDENTIFIER,
         private readonly name = Player.DEALER_NAME,
         private readonly bet = 0,
-        private readonly updateScoreFunction: ((points: number) => void) = ((points) => void (0))) {
+        private readonly updateScoreFunction?: ((points: number, reason: string) => void)) {
 
         if (!this.isDealer && (bet < 1 || bet % 1 !== 0)) {
             throw new Error("Your bet must be a whole, positive number!");
@@ -135,8 +138,8 @@ export class Player {
      * before the start of the game of blackjack.
      */
     public confiscateBet(): void {
-        if (!this.isDealer) {
-            this.updateScoreFunction(-this.bet);
+        if (!this.isDealer && this.updateScoreFunction) {
+            this.updateScoreFunction(-this.bet, Player.BET_CONFISCATION_REASON);
         }
     }
 
@@ -147,9 +150,9 @@ export class Player {
      */
     public rewardPlayer(multiplier: number): number {
         let reward = 0;
-        if (!this.isDealer) {
+        if (!this.isDealer && this.updateScoreFunction) {
             reward = Math.floor(this.bet * multiplier);
-            this.updateScoreFunction(reward);
+            this.updateScoreFunction(reward, Player.WINNER_REWARD_REASON);
         }
         return reward;
     }
