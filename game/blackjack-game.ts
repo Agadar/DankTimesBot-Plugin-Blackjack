@@ -22,7 +22,7 @@ export class BlackjackGame {
 
     private gameState = GameState.INITIALIZING;
     private playerTurnIndex = -1;
-    private playerTurnTimeoutId: number;
+    private playerTurnTimeoutId: NodeJS.Timeout;
 
     /**
      * Initializes a new game.

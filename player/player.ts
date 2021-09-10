@@ -160,7 +160,7 @@ export class Player {
     private calculatePossibleHandValues(): number[] {
         let sums = [0];
         for (const card of this.mycards) {
-            const cardValues = RANK_VALUES.get(card.rank);
+            const cardValues = RANK_VALUES.get(card.rank) ?? [];
             let newSums: number[] = [];
 
             for (const cardValue of cardValues) {

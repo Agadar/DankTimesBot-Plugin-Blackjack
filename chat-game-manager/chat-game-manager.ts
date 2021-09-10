@@ -25,7 +25,7 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
     private readonly listeners = new Array<IBlackjackGameListener<ChatGameManager>>();
     private readonly statistics = new ChatStatistics();
 
-    private game: BlackjackGame = null;
+    private game: BlackjackGame | null = null;
 
     /**
      * Constructor.
@@ -50,7 +50,7 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
         }
         const player = this.createPlayerFromUser(user, bet);
         this.createGame(player);
-        const secondsBeforeStart = this.game.initializeGame();
+        const secondsBeforeStart = (this.game as BlackjackGame).initializeGame();
         player.confiscateBet();
         this.statistics.updateDealerBalance(bet);
         return secondsBeforeStart;
@@ -66,7 +66,7 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
             throw new Error(ChatGameManager.NO_GAME_RUNNING_TEXT);
         }
         const player = this.createPlayerFromUser(user, bet);
-        this.game.joinGame(player);
+        (this.game as BlackjackGame).joinGame(player);
         player.confiscateBet();
         this.statistics.updateDealerBalance(bet);
     }
@@ -80,7 +80,7 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
         if (!this.gameIsRunning) {
             throw new Error(ChatGameManager.NO_GAME_RUNNING_TEXT);
         }
-        return this.game.stand(userId);
+        return (this.game as BlackjackGame).stand(userId);
     }
 
     /**
@@ -92,7 +92,7 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
         if (!this.gameIsRunning) {
             throw new Error(ChatGameManager.NO_GAME_RUNNING_TEXT);
         }
-        return this.game.hit(userId);
+        return (this.game as BlackjackGame).hit(userId);
     }
 
     /**
@@ -109,7 +109,7 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
         if (!this.gameIsRunning) {
             return [];
         }
-        return this.game.players;
+        return (this.game as BlackjackGame).players;
     }
 
     /**

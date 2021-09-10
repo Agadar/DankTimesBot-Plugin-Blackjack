@@ -14,15 +14,9 @@ export class DeckFactory {
      */
     public createDeck(): Deck {
         const cards = new Array<Card>();
-
-        // tslint:disable-next-line:forin
-        for (const suit in Suit) {
-            const castSuit = Suit[suit] as Suit;
-
-            // tslint:disable-next-line:forin
-            for (const rank in Rank) {
-                const castRank = Rank[rank] as Rank;
-                const card = new Card(castSuit, castRank);
+        for (const suit of Object.values(Suit)) {
+            for (const rank of Object.values(Rank)) {
+                const card = new Card(suit, rank);
                 cards.push(card);
             }
         }

@@ -23,7 +23,7 @@ export interface IBlackjackGameListener<T> {
      * @param timedOutPlayer The timed out player.
      * @param nextPlayer The next player.
      */
-    onPlayerTurnTimedOut(source: T, timedOutPlayer: Player, nextPlayer: Player);
+    onPlayerTurnTimedOut(source: T, timedOutPlayer: Player, nextPlayer: Player): void;
 
     /**
      * Called when the dealer has drawn a card for themselves.

@@ -126,17 +126,19 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
     return reply;
   }
 
-  private stand(chat: Chat, user: User, msg: any, match: string[]): string {
+  private stand(chat: Chat, user: User, msg: any, match: string[]): string | null {
     const gameManager = this.getOrCreateGameManager(chat);
     try {
       const nextPlayer = gameManager.stand(user.id);
       return this.pluginTexts.getNextPlayerTurnMessage(nextPlayer);
+
     } catch (ex) {
       console.error(ex);
+      return null;
     }
   }
 
-  private hit(chat: Chat, user: User, msg: any, match: string[]): string {
+  private hit(chat: Chat, user: User, msg: any, match: string[]): string | null {
     const gameManager = this.getOrCreateGameManager(chat);
     try {
       const info = gameManager.hit(user.id);
@@ -153,6 +155,7 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
 
     } catch (ex) {
       console.error(ex);
+      return null;
     }
   }
 
