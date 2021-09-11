@@ -32,12 +32,12 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
    * @override
    */
   public getPluginSpecificCommands(): BotCommand[] {
-    const infoCmd = new BotCommand(Plugin.INFO_CMD, "prints info about the Blackjack plugin",
+    const infoCmd = new BotCommand([Plugin.INFO_CMD], "prints info about the Blackjack plugin",
       this.blackjackInfo.bind(this));
-    const betCmd = new BotCommand(Plugin.BET_CMD, "", this.bet.bind(this), false);
-    const standCmd = new BotCommand(Plugin.STAND_CMD, "", this.stand.bind(this), false);
-    const hitCmd = new BotCommand(Plugin.HIT_CMD, "", this.hit.bind(this), false);
-    const statisticsCmd = new BotCommand(Plugin.STATISTICS_CMD, "", this.statistics.bind(this), false);
+    const betCmd = new BotCommand([Plugin.BET_CMD], "", this.bet.bind(this), false);
+    const standCmd = new BotCommand([Plugin.STAND_CMD], "", this.stand.bind(this), false);
+    const hitCmd = new BotCommand([Plugin.HIT_CMD], "", this.hit.bind(this), false);
+    const statisticsCmd = new BotCommand([Plugin.STATISTICS_CMD], "", this.statistics.bind(this), false);
     return [infoCmd, betCmd, standCmd, hitCmd, statisticsCmd];
   }
 
