@@ -1,3 +1,4 @@
+import TelegramBot from "node-telegram-bot-api";
 import { BotCommand } from "../../src/bot-commands/bot-command";
 import { Chat } from "../../src/chat/chat";
 import { User } from "../../src/chat/user/user";
@@ -84,7 +85,7 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
     this.sendMessage(source.chatId, message);
   }
 
-  private blackjackInfo(chat: Chat, user: User, msg: any, match: string[]): string {
+  private blackjackInfo(chat: Chat, user: User, msg: TelegramBot.Message, match: string): string {
     return "♣️♥ It's basic Blackjack ♠️️♦️\n\n"
       + `/${Plugin.BET_CMD} to start or join a game with a specified bet\n`
       + `/${Plugin.STAND_CMD} to take no more cards (when it's your turn)\n`
@@ -92,17 +93,14 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
       + `/${Plugin.STATISTICS_CMD} to see some statistics of this chat`;
   }
 
-  private bet(chat: Chat, user: User, msg: any, match: string[]): string {
-    const split: string[] = msg.text.split(" ");
-
-    if (split.length < 2) {
+  private bet(chat: Chat, user: User, msg: TelegramBot.Message, match: string): string {
+    if (!match) {
       return `⚠️ Not enough arguments! Format: /${Plugin.BET_CMD} [value]`;
     }
-    const betArgs = split.slice(1);
-    let bet = Number(betArgs[0]);
+    let bet = Number(match);
 
     if (isNaN(bet)) {
-      if (Plugin.ALL_IN_TEXTS.includes(betArgs.join(" "))) {
+      if (Plugin.ALL_IN_TEXTS.includes(match)) {
         bet = user.score;
       } else {
         return "⚠️ Your bet has to be a numeric value, smartass.";
@@ -126,7 +124,7 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
     return reply;
   }
 
-  private stand(chat: Chat, user: User, msg: any, match: string[]): string | null {
+  private stand(chat: Chat, user: User, msg: TelegramBot.Message, match: string): string | null {
     const gameManager = this.getOrCreateGameManager(chat);
     try {
       const nextPlayer = gameManager.stand(user.id);
@@ -138,7 +136,7 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
     }
   }
 
-  private hit(chat: Chat, user: User, msg: any, match: string[]): string | null {
+  private hit(chat: Chat, user: User, msg: TelegramBot.Message, match: string): string | null {
     const gameManager = this.getOrCreateGameManager(chat);
     try {
       const info = gameManager.hit(user.id);
@@ -159,7 +157,7 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
     }
   }
 
-  private statistics(chat: Chat, user: User, msg: any, match: string[]): string {
+  private statistics(chat: Chat, user: User, msg: TelegramBot.Message, match: string): string {
     const gameManager = this.getOrCreateGameManager(chat);
     return gameManager.formattedStatisticsText;
   }
