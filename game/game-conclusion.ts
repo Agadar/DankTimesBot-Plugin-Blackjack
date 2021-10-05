@@ -13,6 +13,7 @@ export class GameConclusion {
      * @param sameScoreAsDealerPlayers The players that had the same (non-blackjack) score as the dealer.
      * @param higherScoreThanDealerPlayers The players that had a higher (non-blackjack) score than the dealer.
      * @param playersWithBlackjack The players that had a blackjack.
+     * @param surrenderedPlayers The players that surrendered.
      */
     constructor(
         public readonly dealerBusted: boolean,
@@ -20,6 +21,7 @@ export class GameConclusion {
         public readonly lowerScoreThanDealerPlayers: Player[],
         public readonly sameScoreAsDealerPlayers: Player[],
         public readonly higherScoreThanDealerPlayers: Player[],
-        public readonly playersWithBlackjack: Player[]) { }
+        public readonly playersWithBlackjack: Player[],
+        public readonly surrenderedPlayers: Player[]) { }
 
 }

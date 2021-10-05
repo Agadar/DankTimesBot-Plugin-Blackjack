@@ -1,6 +1,7 @@
 import { Card } from "../card/card";
 import { Rank } from "../card/rank";
 import { RANK_VALUES } from "../card/rankValues";
+import { HandState } from "./hand-state";
 
 /**
  * A player partaking in a game of Blackjack.
@@ -15,11 +16,11 @@ export class Player {
 
     private static readonly BET_CONFISCATION_REASON = "bet.confiscation";
     private static readonly WINNER_REWARD_REASON = "winner.reward";
+    private static readonly SURRENDERED_REWARD_REASON = "surrendered.reward";
 
     private readonly mycards = new Array<Card>();
 
-    private myHasBlackjack = false;
-    private myIsBusted = false;
+    private myHandState = HandState.Normal;
     private myNonBustedHandValues: number[] = [];
     private myHasReachedDealerMinimum = false;
 
@@ -69,10 +70,17 @@ export class Player {
     }
 
     /**
-     * Whether this player is busted.
+     * The player's hand state.
      */
-    public get isBusted(): boolean {
-        return this.myIsBusted;
+    public get handState(): HandState {
+        return this.myHandState;
+    }
+
+    /**
+     * Sets this player as having surrendered.
+     */
+    public setSurrendered() {
+        this.myHandState = HandState.Surrendered;
     }
 
     /**
@@ -102,13 +110,6 @@ export class Player {
     }
 
     /**
-     * Whether this player has blackjack.
-     */
-    public get hasBlackjack(): boolean {
-        return this.myHasBlackjack;
-    }
-
-    /**
      * Gets this player's formatted name.
      */
     public get formattedName(): string {
@@ -130,7 +131,7 @@ export class Player {
      * busted and blackjack status.
      */
     public get mayDrawCard(): boolean {
-        return !this.isBusted && !this.hasBlackjack;
+        return this.myHandState === HandState.Normal;
     }
 
     /**
@@ -152,7 +153,9 @@ export class Player {
         let reward = 0;
         if (!this.isDealer && this.updateScoreFunction) {
             reward = Math.floor(this.bet * multiplier);
-            this.updateScoreFunction(reward, Player.WINNER_REWARD_REASON);
+            const reason = this.handState === HandState.Surrendered ?
+                Player.SURRENDERED_REWARD_REASON : Player.WINNER_REWARD_REASON;
+            this.updateScoreFunction(reward, reason);
         }
         return reward;
     }
@@ -177,17 +180,18 @@ export class Player {
     }
 
     private recalculateHasBlackjack(): void {
-        if (this.mycards.length !== 2) {
-            this.myHasBlackjack = false;
-        } else {
-            this.myHasBlackjack = this.highestNonBustedHandValue === Player.MAX_HAND_VALUE &&
-                (this.mycards[0].rank === Rank.Ace || this.mycards[1].rank === Rank.Ace);
+        if (this.mycards.length === 2 && this.highestNonBustedHandValue === Player.MAX_HAND_VALUE &&
+            (this.mycards[0].rank === Rank.Ace || this.mycards[1].rank === Rank.Ace)) {
+            this.myHandState = HandState.Blackjack;
         }
     }
 
     private recalculateIsBusted(handValues: number[]): void {
         const index = handValues.findIndex((value) => value <= Player.MAX_HAND_VALUE);
-        this.myIsBusted = index === -1;
+
+        if (index === -1) {
+            this.myHandState = HandState.Busted;
+        }
     }
 
     private recalculateNonBustedHandValues(handValues: number[]): void {

@@ -21,6 +21,7 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
     private static readonly BET_MULTIPLIER_ON_EVEN = 1;
     private static readonly BET_MULTIPLIER_ON_WIN = 2;
     private static readonly BET_MULTIPLIER_ON_BLACKJACK = 2.5;
+    private static readonly BET_MULTIPLIER_ON_SURRENDER = 0.5;
 
     private readonly listeners = new Array<IBlackjackGameListener<ChatGameManager>>();
     private readonly statistics = new ChatStatistics();
@@ -81,6 +82,18 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
             throw new Error(ChatGameManager.NO_GAME_RUNNING_TEXT);
         }
         return (this.game as BlackjackGame).stand(userId);
+    }
+
+    /**
+     * If it is the user's turn, instructs the dealer they desire to surrender.
+     * @param userId The id of the user desiring to surrender.
+     * @return The player that is next, which can also be the dealer.
+     */
+    public surrender(userId: number): { nextPlayer: Player | null, errorMsg: string | null } {
+        if (!this.gameIsRunning) {
+            throw new Error(ChatGameManager.NO_GAME_RUNNING_TEXT);
+        }
+        return (this.game as BlackjackGame).surrender(userId);
     }
 
     /**
@@ -194,6 +207,7 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
         this.rewardPlayers(conclusion.playersWithBlackjack, ChatGameManager.BET_MULTIPLIER_ON_BLACKJACK);
         this.rewardPlayers(conclusion.higherScoreThanDealerPlayers, ChatGameManager.BET_MULTIPLIER_ON_WIN);
         this.rewardPlayers(conclusion.sameScoreAsDealerPlayers, ChatGameManager.BET_MULTIPLIER_ON_EVEN);
+        this.rewardPlayers(conclusion.surrenderedPlayers, ChatGameManager.BET_MULTIPLIER_ON_SURRENDER);
     }
 
     private rewardPlayers(players: Player[], multiplier: number) {

@@ -1,4 +1,5 @@
 import { Deck } from "../deck/deck";
+import { HandState } from "../player/hand-state";
 import { Player } from "../player/player";
 import { IBlackjackGameListener } from "./blackjack-game-listener";
 import { GameConclusion } from "./game-conclusion";
@@ -104,6 +105,26 @@ export class BlackjackGame {
     }
 
     /**
+     * If it is the turn of the player that has the supplied identifier, instructs the dealer they desire to surrender.
+     * @param identifier The identifier of the player desiring to surrender.
+     * @return The player that is next, which can also be the dealer.
+     * @throws Error if it is not the player's turn.
+     */
+    public surrender(identifier: number): { nextPlayer: Player | null, errorMsg: string | null } {
+        if (this.gameState !== GameState.PLAYER_TURNS) { throw new Error("It is not your turn!"); }
+        const currentPlayer = this.currentPlayer;
+        if (currentPlayer.identifier !== identifier) { throw new Error("It is not your turn!"); } 2;
+
+        if (currentPlayer.cards.length === 2) {
+            currentPlayer.setSurrendered();
+            clearTimeout(this.playerTurnTimeoutId);
+            const nextPlayer = this.startNextPlayerTurn();
+            return { nextPlayer: nextPlayer, errorMsg: null};
+        }
+        return { nextPlayer: null, errorMsg: "Surrendering is no longer allowed!" };
+    }
+
+    /**
      * If it is the turn of the player that has the supplied identifier, instructs the dealer they desire to stand.
      * @param identifier The identifier of the player desiring to stand.
      * @return Information about the hit results.
@@ -121,7 +142,7 @@ export class BlackjackGame {
         theCurrentPlayer.giveCards(drawnCard);
         let theNextPlayer: Player;
 
-        if (theCurrentPlayer.isBusted) {
+        if (theCurrentPlayer.handState === HandState.Busted) {
             theNextPlayer = this.startNextPlayerTurn();
         } else {
             this.schedulePlayerTurnTimeout();
@@ -173,7 +194,7 @@ export class BlackjackGame {
         this.gameState = GameState.DEALER_TURN;
 
         if (this.thereAreNonBustedPlayersWithoutBlackjack()) {
-            while (!this.dealer.isBusted && !this.dealer.hasReachedDealerMinimum) {
+            while (this.dealer.handState === HandState.Normal && !this.dealer.hasReachedDealerMinimum) {
                 const newCard = this.deck.drawCard();
                 this.dealer.giveCards(newCard);
                 this.listeners.forEach((listener) => listener.onDealerDrewCard(this, this.dealer, newCard));
@@ -192,43 +213,47 @@ export class BlackjackGame {
         const sameScoreAsDealerPlayers = this.getPlayersWithSameScoreAsDealer();
         const higherScoreThanDealerPlayers = this.getPlayersWithHigherScoreThanDealer();
         const playersWithBlackjack = this.getPlayersWithBlackjack();
+        const surrenderedPlayers = this.getSurrenderedPlayers();
 
         return new GameConclusion(
-            this.dealer.isBusted,
+            this.dealer.handState === HandState.Busted,
             bustedPlayers,
             lowerScoreThanDealerPlayers,
             sameScoreAsDealerPlayers,
             higherScoreThanDealerPlayers,
-            playersWithBlackjack);
+            playersWithBlackjack,
+            surrenderedPlayers);
     }
 
     private thereAreNonBustedPlayersWithoutBlackjack(): boolean {
-        return this.myPlayers.findIndex((player) => !player.isBusted && !player.hasBlackjack) !== -1;
+        return this.myPlayers.findIndex((player) => player.handState == HandState.Normal) !== -1;
     }
 
     private getBustedPlayers(): Player[] {
-        return this.myPlayers.filter((player) => player.isBusted);
+        return this.myPlayers.filter((player) => player.handState === HandState.Busted);
     }
 
     private getPlayersWithLowerScoreThanDealer(): Player[] {
-        return this.myPlayers.filter((player) =>
-            !player.isBusted && player.highestNonBustedHandValue < this.dealer.highestNonBustedHandValue);
+        return this.myPlayers.filter((player) => player.handState === HandState.Normal &&
+            player.highestNonBustedHandValue < this.dealer.highestNonBustedHandValue);
     }
 
     private getPlayersWithSameScoreAsDealer(): Player[] {
-        return this.myPlayers.filter((player) =>
-            !player.isBusted && !player.hasBlackjack &&
+        return this.myPlayers.filter((player) => player.handState === HandState.Normal &&
             player.highestNonBustedHandValue === this.dealer.highestNonBustedHandValue);
     }
 
     private getPlayersWithHigherScoreThanDealer(): Player[] {
-        return this.myPlayers.filter((player) =>
-            player.highestNonBustedHandValue > this.dealer.highestNonBustedHandValue
-            && !player.isBusted && !player.hasBlackjack);
+        return this.myPlayers.filter((player) => player.handState === HandState.Normal && 
+            player.highestNonBustedHandValue > this.dealer.highestNonBustedHandValue);
     }
 
     private getPlayersWithBlackjack(): Player[] {
-        return this.myPlayers.filter((player) => player.hasBlackjack);
+        return this.myPlayers.filter((player) => player.handState === HandState.Blackjack);
+    }
+
+    private getSurrenderedPlayers(): Player[] {
+        return this.myPlayers.filter((player) => player.handState === HandState.Surrendered);
     }
 
     private get currentPlayer(): Player {

@@ -8,6 +8,7 @@ import { ChatGameManager } from "./chat-game-manager/chat-game-manager";
 import { DeckFactory } from "./deck/deckFactory";
 import { IBlackjackGameListener } from "./game/blackjack-game-listener";
 import { GameConclusion } from "./game/game-conclusion";
+import { HandState } from "./player/hand-state";
 import { Player } from "./player/player";
 import { PluginTexts } from "./util/plugin-texts";
 
@@ -17,12 +18,13 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
   private static readonly BET_CMD = `bjbet`;
   private static readonly STAND_CMD = `bjstand`;
   private static readonly HIT_CMD = `bjhit`;
+  private static readonly SURRENDER_CMD = `surrender`;
   private static readonly STATISTICS_CMD = `bjstats`;
 
   private static readonly ALL_IN_TEXTS = ["all", "allin", "all-in", "all in"];
 
   private readonly deckFactory = new DeckFactory();
-  private readonly pluginTexts = new PluginTexts(Plugin.HIT_CMD, Plugin.STAND_CMD);
+  private readonly pluginTexts = new PluginTexts(Plugin.HIT_CMD, Plugin.STAND_CMD, Plugin.SURRENDER_CMD);
   private readonly gameManagers = new Map<number, ChatGameManager>();
 
   constructor() {
@@ -38,8 +40,9 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
     const betCmd = new BotCommand([Plugin.BET_CMD], "", this.bet.bind(this), false);
     const standCmd = new BotCommand([Plugin.STAND_CMD], "", this.stand.bind(this), false);
     const hitCmd = new BotCommand([Plugin.HIT_CMD], "", this.hit.bind(this), false);
+    const surrenderCmd = new BotCommand([Plugin.SURRENDER_CMD], "", this.surrender.bind(this), false);
     const statisticsCmd = new BotCommand([Plugin.STATISTICS_CMD], "", this.statistics.bind(this), false);
-    return [infoCmd, betCmd, standCmd, hitCmd, statisticsCmd];
+    return [infoCmd, betCmd, standCmd, hitCmd, surrenderCmd, statisticsCmd];
   }
 
   /**
@@ -48,7 +51,7 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
   public onCardsDealt(source: ChatGameManager, dealer: Player, startingPlayer: Player): void {
     const dealerLine = this.pluginTexts.getCardsDealtPlayerTextLine(dealer);
     const playerLines = source.players.map((player) => this.pluginTexts.getCardsDealtPlayerTextLine(player)).join("\n");
-    const playerTurnMsg = this.pluginTexts.getNextPlayerTurnMessage(startingPlayer);
+    const playerTurnMsg = this.pluginTexts.getNextPlayerTurnMessage(startingPlayer, true);
     const cardsInfo = `The game has begun!\n\n${dealerLine}\n${playerLines}\n\n${playerTurnMsg}`;
     this.sendMessage(source.chatId, cardsInfo);
   }
@@ -80,7 +83,7 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
    * @implements IBlackjackGameListener
    */
   public onPlayerTurnTimedOut(source: ChatGameManager, timedOutPlayer: Player, nextPlayer: Player) {
-    const playerTurnMsg = this.pluginTexts.getNextPlayerTurnMessage(nextPlayer);
+    const playerTurnMsg = this.pluginTexts.getNextPlayerTurnMessage(nextPlayer, true);
     const message = `${timedOutPlayer.formattedName} took too long to decide.\n\n${playerTurnMsg}`;
     this.sendMessage(source.chatId, message);
   }
@@ -90,6 +93,7 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
       + `/${Plugin.BET_CMD} to start or join a game with a specified bet\n`
       + `/${Plugin.STAND_CMD} to take no more cards (when it's your turn)\n`
       + `/${Plugin.HIT_CMD} to take another card (when it's your turn)\n`
+      + `/${Plugin.SURRENDER_CMD} to surrender (when it's your turn)\n`
       + `/${Plugin.STATISTICS_CMD} to see some statistics of this chat`;
   }
 
@@ -128,7 +132,23 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
     const gameManager = this.getOrCreateGameManager(chat);
     try {
       const nextPlayer = gameManager.stand(user.id);
-      return this.pluginTexts.getNextPlayerTurnMessage(nextPlayer);
+      return this.pluginTexts.getNextPlayerTurnMessage(nextPlayer, true);
+
+    } catch (ex) {
+      console.error(ex);
+      return null;
+    }
+  }
+
+  private surrender(chat: Chat, user: User, msg: TelegramBot.Message, match: string): string | null {
+    const gameManager = this.getOrCreateGameManager(chat);
+    try {
+      const surrenderResult = gameManager.surrender(user.id);
+
+      if (surrenderResult.errorMsg) {
+        return `⚠️ ${surrenderResult.errorMsg}`;
+      }
+      return this.pluginTexts.getNextPlayerTurnMessage(surrenderResult.nextPlayer, true);
 
     } catch (ex) {
       console.error(ex);
@@ -143,11 +163,11 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
       let reply = `The dealer deals ${info.currentPlayer.formattedName} ${info.card.toString()}.`;
       reply += this.pluginTexts.handValuesAsString(info.currentPlayer);
 
-      if (info.currentPlayer.isBusted) {
-        const nextPlayerTurnMsg = this.pluginTexts.getNextPlayerTurnMessage(info.nextPlayer);
+      if (info.currentPlayer.handState === HandState.Busted) {
+        const nextPlayerTurnMsg = this.pluginTexts.getNextPlayerTurnMessage(info.nextPlayer, true);
         reply += `\n\n${nextPlayerTurnMsg}`;
       } else {
-        reply += this.pluginTexts.getPlayerTurnOptionsText();
+        reply += this.pluginTexts.getPlayerTurnOptionsText(false);
       }
       return reply;
 
