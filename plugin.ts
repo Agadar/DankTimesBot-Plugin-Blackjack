@@ -18,7 +18,7 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
   private static readonly BET_CMD = `bjbet`;
   private static readonly STAND_CMD = `bjstand`;
   private static readonly HIT_CMD = `bjhit`;
-  private static readonly SURRENDER_CMD = `surrender`;
+  private static readonly SURRENDER_CMD = `bjsurrender`;
   private static readonly STATISTICS_CMD = `bjstats`;
 
   private static readonly ALL_IN_TEXTS = ["all", "allin", "all-in", "all in"];
