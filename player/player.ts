@@ -28,7 +28,7 @@ export class Player {
      * is assumed to be the dealer.
      * @param name The name of this player. If not supplied, falls back to a default
      * dealer name.
-     * @param bet The original bet of the player. Does not have to be supplied if this
+     * @param myBet The original bet of the player. Does not have to be supplied if this
      * player is the dealer (as it will be ignored anyway).
      * @param updateScoreFunction The function to use for updating the score, which is
      * used for subtracting the original bet from the player as well as for rewarding them
@@ -39,7 +39,7 @@ export class Player {
     constructor(
         public readonly identifier = Player.DEALER_IDENTIFIER,
         private readonly name = Player.DEALER_NAME,
-        private readonly bet = 0,
+        private myBet = 0,
         private readonly updateScoreFunction?: ((points: number, reason: string) => void)) {}
 
     /**
@@ -70,10 +70,25 @@ export class Player {
     }
 
     /**
+     * The player's bet.
+     */
+    public get bet(): number {
+        return this.myBet;
+    }
+
+    /**
      * Sets this player as having surrendered.
      */
     public setSurrendered() {
         this.myHandState = HandState.Surrendered;
+    }
+
+    /**
+     * Instructs this player they're doubling down.
+     */
+    public doubleDown(): void {
+        this.confiscateBet();
+        this.myBet *= 2;
     }
 
     /**
@@ -133,7 +148,7 @@ export class Player {
      */
     public confiscateBet(): void {
         if (!this.isDealer && this.updateScoreFunction) {
-            this.updateScoreFunction(-this.bet, Player.BET_CONFISCATION_REASON);
+            this.updateScoreFunction(-this.myBet, Player.BET_CONFISCATION_REASON);
         }
     }
 
@@ -146,10 +161,17 @@ export class Player {
     public rewardPlayer(multiplier: number, reason: string): number {
         let reward = 0;
         if (!this.isDealer && this.updateScoreFunction) {
-            reward = Math.floor(this.bet * multiplier);
+            reward = Math.floor(this.myBet * multiplier);
             this.updateScoreFunction(reward, reason);
         }
         return reward;
+    }
+
+    /**
+     * True if its the player's first turn, else false.
+     */
+    public get isFirstTurn(): boolean {
+        return this.cards.length === 2;
     }
 
     private calculatePossibleHandValues(): number[] {

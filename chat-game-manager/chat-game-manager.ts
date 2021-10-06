@@ -16,8 +16,6 @@ import { ChatStatistics } from "./chat-statistics";
  */
 export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
 
-    private static readonly NO_GAME_RUNNING_TEXT = "There's no game running!";
-
     // Bet multipliers
     private static readonly BET_MULTIPLIER_ON_EVEN = 1;
     private static readonly BET_MULTIPLIER_ON_WIN = 2;
@@ -131,6 +129,18 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
     public hit(userId: number): HitResult | null {
         if (this.gameIsRunning) {
             return (this.game as BlackjackGame).hit(userId);
+        }
+    }
+
+    /**
+     * If it is the turn of the given user, instructs the dealer they desire to double down.
+     * @param user The user desiring to double down.
+     * @return Information about the hit results, or an error string if doubling down failed and the user need
+     * be informed, or null if doubling down failed but no informing is necessary.
+     */
+    public doubleDown(user: User): HitResult | string | null {
+        if (this.gameIsRunning) {
+            return (this.game as BlackjackGame).doubleDown(user);
         }
     }
 

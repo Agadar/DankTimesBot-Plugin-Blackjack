@@ -12,17 +12,19 @@ export class PluginTexts {
      * @param hitCommand The text for the hit command.
      * @param standCommand The text for the stand command.
      * @param surrenderCommand The text for the surrender command.
+     * @param doubleDownCommand The text for the double down command.
      */
     constructor(
         private readonly hitCommand: string,
         private readonly standCommand: string,
-        private readonly surrenderCommand: string) { }
+        private readonly surrenderCommand: string,
+        private readonly doubleDownCommand: string) { }
 
-    public getNextPlayerTurnMessage(player: Player, isFirstTurn: boolean): string {
+    public getNextPlayerTurnMessage(player: Player, isFirstTurn: boolean, canDoubleDown: boolean): string {
         const playerCardsText = this.cardsAsString(player);
         let msg = `❕ ${player.formattedName} is up next. They are showing ${playerCardsText}`;
         if (!player.isDealer) {
-            msg += this.getPlayerTurnOptionsText(isFirstTurn);
+            msg += this.getPlayerTurnOptionsText(isFirstTurn, canDoubleDown);
         }
         return msg;
     }
@@ -56,11 +58,14 @@ export class PluginTexts {
         return ` ${player.formattedName} busted.`;
     }
 
-    public getPlayerTurnOptionsText(isFirstTurn: boolean): string {
-        if (isFirstTurn) {
-            return `\n\nDo you want to /${this.hitCommand}, /${this.standCommand}, or /${this.surrenderCommand}?`;
+    public getPlayerTurnOptionsText(isFirstTurn: boolean, canDoubleDown: boolean): string {
+        if (!isFirstTurn) {
+            return `\n\nDo you want to /${this.hitCommand}, or /${this.standCommand}?`;
         }
-        return `\n\nDo you want to /${this.hitCommand}, or /${this.standCommand}?`;
+        if (canDoubleDown) {
+            return `\n\nDo you want to /${this.hitCommand}, /${this.standCommand}, /${this.surrenderCommand}, or /${this.doubleDownCommand}?`;
+        }
+        return `\n\nDo you want to /${this.hitCommand}, /${this.standCommand}, or /${this.surrenderCommand}?`;
     }
 
     private cardsAsString(player: Player): string {

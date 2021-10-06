@@ -1,3 +1,4 @@
+import { User } from "../../../src/chat/user/user";
 import { Deck } from "../deck/deck";
 import { HandState } from "../player/hand-state";
 import { Player } from "../player/player";
@@ -108,7 +109,7 @@ export class BlackjackGame {
         const currentPlayer = this.currentPlayer;
         if (currentPlayer.identifier !== identifier) { return; }
 
-        if (currentPlayer.cards.length === 2) {
+        if (currentPlayer.isFirstTurn) {
             currentPlayer.setSurrendered();
             clearTimeout(this.playerTurnTimeoutId);
             const nextPlayer = this.startNextPlayerTurn();
@@ -118,8 +119,8 @@ export class BlackjackGame {
     }
 
     /**
-     * If it is the turn of the player that has the supplied identifier, instructs the dealer they desire to stand.
-     * @param identifier The identifier of the player desiring to stand.
+     * If it is the turn of the player that has the supplied identifier, instructs the dealer they desire to hit.
+     * @param identifier The identifier of the player desiring to hit.
      * @return Information about the hit results. or null if hitting failed.
      */
     public hit(identifier: number): HitResult | null {
@@ -140,6 +141,33 @@ export class BlackjackGame {
             this.schedulePlayerTurnTimeout();
             theNextPlayer = theCurrentPlayer;
         }
+        return { card: drawnCard, currentPlayer: theCurrentPlayer, nextPlayer: theNextPlayer };
+    }
+
+    /**
+     * If it is the turn of the given user, instructs the dealer they desire to double down.
+     * @param user The user desiring to double down.
+     * @return Information about the hit results, or an error string if doubling down failed and the user need
+     * be informed, or null if doubling down failed but no informing is necessary.
+     */
+    public doubleDown(user: User): HitResult | string | null {
+        if (this.gameState !== GameState.PLAYER_TURNS) { return; }
+        const theCurrentPlayer = this.currentPlayer;
+        if (theCurrentPlayer.identifier !== user.id) {
+            return;
+        }
+        if (!theCurrentPlayer.isFirstTurn) {
+            return "Doubling down is no longer allowed!";
+        }
+        if (user.score < theCurrentPlayer.bet) {
+            return "You don't have enough points to double down!";
+        }
+        clearTimeout(this.playerTurnTimeoutId);
+
+        theCurrentPlayer.doubleDown();
+        const drawnCard = this.deck.drawCard();
+        theCurrentPlayer.giveCards(drawnCard);
+        const theNextPlayer = this.startNextPlayerTurn();
         return { card: drawnCard, currentPlayer: theCurrentPlayer, nextPlayer: theNextPlayer };
     }
 
