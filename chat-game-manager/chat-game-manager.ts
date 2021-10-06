@@ -18,10 +18,16 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
 
     private static readonly NO_GAME_RUNNING_TEXT = "There's no game running!";
 
+    // Bet multipliers
     private static readonly BET_MULTIPLIER_ON_EVEN = 1;
     private static readonly BET_MULTIPLIER_ON_WIN = 2;
     private static readonly BET_MULTIPLIER_ON_BLACKJACK = 2.5;
     private static readonly BET_MULTIPLIER_ON_SURRENDER = 0.5;
+
+    // Reward reasons
+    private static readonly WINNER_REWARD_REASON = "winner.reward";
+    private static readonly SURRENDERED_REWARD_REASON = "surrendered.reward";
+    private static readonly EQUALED_DEALER_REWARD_REASON = "equaled.dealer.reward";
 
     private readonly listeners = new Array<IBlackjackGameListener<ChatGameManager>>();
     private readonly statistics = new ChatStatistics();
@@ -204,15 +210,19 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
     }
 
     private rewardPlayersOnGameConclusion(conclusion: GameConclusion): void {
-        this.rewardPlayers(conclusion.playersWithBlackjack, ChatGameManager.BET_MULTIPLIER_ON_BLACKJACK);
-        this.rewardPlayers(conclusion.higherScoreThanDealerPlayers, ChatGameManager.BET_MULTIPLIER_ON_WIN);
-        this.rewardPlayers(conclusion.sameScoreAsDealerPlayers, ChatGameManager.BET_MULTIPLIER_ON_EVEN);
-        this.rewardPlayers(conclusion.surrenderedPlayers, ChatGameManager.BET_MULTIPLIER_ON_SURRENDER);
+        this.rewardPlayers(conclusion.playersWithBlackjack, ChatGameManager.BET_MULTIPLIER_ON_BLACKJACK,
+            ChatGameManager.WINNER_REWARD_REASON);
+        this.rewardPlayers(conclusion.higherScoreThanDealerPlayers, ChatGameManager.BET_MULTIPLIER_ON_WIN,
+            ChatGameManager.WINNER_REWARD_REASON);
+        this.rewardPlayers(conclusion.sameScoreAsDealerPlayers, ChatGameManager.BET_MULTIPLIER_ON_EVEN,
+            ChatGameManager.EQUALED_DEALER_REWARD_REASON);
+        this.rewardPlayers(conclusion.surrenderedPlayers, ChatGameManager.BET_MULTIPLIER_ON_SURRENDER,
+            ChatGameManager.SURRENDERED_REWARD_REASON);
     }
 
-    private rewardPlayers(players: Player[], multiplier: number) {
+    private rewardPlayers(players: Player[], multiplier: number, reason: string) {
         players.forEach((player) => {
-            const awarded = player.rewardPlayer(multiplier);
+            const awarded = player.rewardPlayer(multiplier, reason);
             this.statistics.updateDealerBalance(-awarded);
         });
     }

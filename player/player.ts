@@ -15,8 +15,6 @@ export class Player {
     private static readonly DEALER_NAME = "The dealer";
 
     private static readonly BET_CONFISCATION_REASON = "bet.confiscation";
-    private static readonly WINNER_REWARD_REASON = "winner.reward";
-    private static readonly SURRENDERED_REWARD_REASON = "surrendered.reward";
 
     private readonly mycards = new Array<Card>();
 
@@ -147,14 +145,13 @@ export class Player {
     /**
      * Rewards the player, using the supplied multiplier for their bet.
      * @param multiplier The multiplier to use.
+     * @param reason The reason for the reward.
      * @returns The amount with which the player was rewarded.
      */
-    public rewardPlayer(multiplier: number): number {
+    public rewardPlayer(multiplier: number, reason: string): number {
         let reward = 0;
         if (!this.isDealer && this.updateScoreFunction) {
             reward = Math.floor(this.bet * multiplier);
-            const reason = this.handState === HandState.Surrendered ?
-                Player.SURRENDERED_REWARD_REASON : Player.WINNER_REWARD_REASON;
             this.updateScoreFunction(reward, reason);
         }
         return reward;
