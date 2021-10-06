@@ -49,32 +49,54 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
      * Starts a new game, if possible.
      * @param user The user that started the game.
      * @param bet The user's bet.
-     * @returns The number of seconds before the game starts.
+     * @returns The number of seconds before the game starts, or an error string
+     * if starting the game failed.
      */
-    public startNewGame(user: User, bet: number): number {
+    public startNewGame(user: User, bet: number): number | string {
         if (this.gameIsRunning) {
-            throw new Error("There's already a game ongoing!");
+            return "There's already a game ongoing!";
         }
-        const player = this.createPlayerFromUser(user, bet);
-        this.createGame(player);
-        const secondsBeforeStart = (this.game as BlackjackGame).initializeGame();
-        player.confiscateBet();
+        const createPlayerResult = this.createPlayerFromUser(user, bet);
+
+        if (typeof(createPlayerResult) === "string") {
+            return createPlayerResult;
+        }
+        const errorMsg = this.createGame(createPlayerResult);
+
+        if (errorMsg) {
+            return errorMsg;
+        }
+        const initializeGameResult = (this.game as BlackjackGame).initializeGame();
+
+        if (typeof(initializeGameResult) === "string") {
+            return initializeGameResult;
+        }
+        createPlayerResult.confiscateBet();
         this.statistics.updateDealerBalance(bet);
-        return secondsBeforeStart;
+        return initializeGameResult;
     }
 
     /**
      * Joins the game, if possible.
      * @param user The user that is joining.
      * @param bet The user's bet.
+     * @returns An error text if something went wrong, otherwise null.
      */
-    public joinGame(user: User, bet: number): void {
+    public joinGame(user: User, bet: number): string | null {
         if (!this.gameIsRunning) {
-            throw new Error(ChatGameManager.NO_GAME_RUNNING_TEXT);
+            return null;
         }
-        const player = this.createPlayerFromUser(user, bet);
-        (this.game as BlackjackGame).joinGame(player);
-        player.confiscateBet();
+        const createPlayerResult = this.createPlayerFromUser(user, bet);
+
+        if (typeof(createPlayerResult) === "string") {
+            return createPlayerResult;
+        }
+        const joinGameResult = (this.game as BlackjackGame).joinGame(createPlayerResult);
+
+        if (joinGameResult) {
+            return joinGameResult;
+        }
+        createPlayerResult.confiscateBet();
         this.statistics.updateDealerBalance(bet);
     }
 
@@ -83,35 +105,33 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
      * @param userId The id of the user desiring to stand.
      * @return The player that is next, which can also be the dealer.
      */
-    public stand(userId: number): Player {
-        if (!this.gameIsRunning) {
-            throw new Error(ChatGameManager.NO_GAME_RUNNING_TEXT);
+    public stand(userId: number): Player | null {
+        if (this.gameIsRunning) {
+            return (this.game as BlackjackGame).stand(userId);
         }
-        return (this.game as BlackjackGame).stand(userId);
     }
 
     /**
      * If it is the user's turn, instructs the dealer they desire to surrender.
      * @param userId The id of the user desiring to surrender.
-     * @return The player that is next, which can also be the dealer.
+     * @return The player that is next, which can also be the dealer, or an error string
+     * if surrendering is not possible.
      */
-    public surrender(userId: number): { nextPlayer: Player | null, errorMsg: string | null } {
-        if (!this.gameIsRunning) {
-            throw new Error(ChatGameManager.NO_GAME_RUNNING_TEXT);
+    public surrender(userId: number): Player | string | null {
+        if (this.gameIsRunning) {
+            return (this.game as BlackjackGame).surrender(userId);
         }
-        return (this.game as BlackjackGame).surrender(userId);
     }
 
     /**
      * Instructs the dealer the user desires to hit.
      * @param userId The id of the user desiring to hit.
-     * @return Information about the hit results.
+     * @return Information about the hit results. or null if hitting failed.
      */
-    public hit(userId: number): HitResult {
-        if (!this.gameIsRunning) {
-            throw new Error(ChatGameManager.NO_GAME_RUNNING_TEXT);
+    public hit(userId: number): HitResult | null {
+        if (this.gameIsRunning) {
+            return (this.game as BlackjackGame).hit(userId);
         }
-        return (this.game as BlackjackGame).hit(userId);
     }
 
     /**
@@ -192,15 +212,25 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
         this.listeners.forEach((listener) => listener.onGameEnded(this, conclusion));
     }
 
-    private createGame(player: Player): void {
+    private createGame(player: Player): string | null {
         const deck = this.deckFactory.createDeck();
-        this.game = new BlackjackGame(deck, player);
+        this.game = new BlackjackGame(deck);
+        const errorMsg = this.game.joinGame(player);
+
+        if (errorMsg) {
+            this.game = null;
+            return errorMsg;
+        }
         this.game.subscribe(this);
+        return null;
     }
 
-    private createPlayerFromUser(user: User, bet: number): Player {
+    private createPlayerFromUser(user: User, bet: number): Player | string {
         if (user.score < bet) {
-            throw new Error("You don't have enough points to make that bet!");
+            return "You don't have enough points to make that bet!";
+        }
+        if (bet < 1 || bet % 1 !== 0) {
+            return "Your bet must be a whole, positive number!";
         }
         const rewardFunction = (points: number, reason: string) => {
             const scoreArgs = new AlterUserScoreArgs(user, points, this.pluginName, reason);

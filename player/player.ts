@@ -40,12 +40,7 @@ export class Player {
         public readonly identifier = Player.DEALER_IDENTIFIER,
         private readonly name = Player.DEALER_NAME,
         private readonly bet = 0,
-        private readonly updateScoreFunction?: ((points: number, reason: string) => void)) {
-
-        if (!this.isDealer && (bet < 1 || bet % 1 !== 0)) {
-            throw new Error("Your bet must be a whole, positive number!");
-        }
-    }
+        private readonly updateScoreFunction?: ((points: number, reason: string) => void)) {}
 
     /**
      * Gives the specified playing cards to this player.

@@ -25,14 +25,7 @@ export class BlackjackGame {
     private playerTurnIndex = -1;
     private playerTurnTimeoutId: NodeJS.Timeout;
 
-    /**
-     * Initializes a new game.
-     * @param player The player that is joining.
-     * @throws See #joinGame.
-     */
-    constructor(private readonly deck: Deck, player: Player) {
-        this.joinGame(player);
-    }
+    constructor(private readonly deck: Deck) {}
 
     /**
      * Subscribes to this blackjack game to receive asynchronous updates.
@@ -62,12 +55,12 @@ export class BlackjackGame {
     /**
      * Initializes this game, starting a timer during which players can join
      * the game. After the timer, the game starts.
-     * @return The number of seconds before the game starts.
-     * @throws An error if the game was already initialized.
+     * @returns The number of seconds before the game starts, or an error string if
+     * initializing the game is not possible.
      */
-    public initializeGame(): number {
+    public initializeGame(): number | string {
         if (this.gameState !== GameState.INITIALIZING) {
-            throw new Error("Game has already been initialized - this is a programming error!");
+            return "Game has already been initialized - this is a programming error!";
         }
         this.gameState = GameState.AWAITING_PLAYERS;
         setTimeout(this.dealCards.bind(this), BlackjackGame.TIME_WAIT_FOR_PLAYERS_MS);
@@ -77,29 +70,29 @@ export class BlackjackGame {
     /**
      * Joins this game of blackjack.
      * @param player The player that is joining.
-     * @throws An error if the maximum number of players has already been reached,
+     * @returns An error string if the maximum number of players has already been reached,
      * if the player is already partaking, or if joining is no longer possible.
      */
-    public joinGame(player: Player): void {
+    public joinGame(player: Player): string | null {
         if (!this.isJoinable) {
-            throw new Error("It's no longer possible to join the game!");
+            return "It's no longer possible to join the game!";
         }
         if (this.myPlayers.findIndex((entry) => entry.identifier === player.identifier) !== -1) {
-            throw new Error("You're already partaking in this game!");
+            return "You're already partaking in this game!";
         }
         this.myPlayers.push(player);
+        return null;
     }
 
     /**
      * If it is the turn of the player that has the supplied identifier, instructs the dealer they desire to stand.
      * @param identifier The identifier of the player desiring to stand.
-     * @return The player that is next, which can also be the dealer.
-     * @throws Error if it is not the player's turn.
+     * @return The player that is next, which can also be the dealer, or null if the current player cannot stand.
      */
-    public stand(identifier: number): Player {
-        if (this.gameState !== GameState.PLAYER_TURNS) { throw new Error("It is not your turn!"); }
+    public stand(identifier: number): Player | null {
+        if (this.gameState !== GameState.PLAYER_TURNS) { return; }
         const currentPlayer = this.currentPlayer;
-        if (currentPlayer.identifier !== identifier) { throw new Error("It is not your turn!"); }
+        if (currentPlayer.identifier !== identifier) { return; }
         clearTimeout(this.playerTurnTimeoutId);
         return this.startNextPlayerTurn();
     }
@@ -107,34 +100,33 @@ export class BlackjackGame {
     /**
      * If it is the turn of the player that has the supplied identifier, instructs the dealer they desire to surrender.
      * @param identifier The identifier of the player desiring to surrender.
-     * @return The player that is next, which can also be the dealer.
-     * @throws Error if it is not the player's turn.
+     * @return The player that is next, which can also be the dealer, or an error text if an error occured that
+     * requires informing the users, or null if an error occured that does not require that.
      */
-    public surrender(identifier: number): { nextPlayer: Player | null, errorMsg: string | null } {
-        if (this.gameState !== GameState.PLAYER_TURNS) { throw new Error("It is not your turn!"); }
+    public surrender(identifier: number): Player | string | null {
+        if (this.gameState !== GameState.PLAYER_TURNS) { return; }
         const currentPlayer = this.currentPlayer;
-        if (currentPlayer.identifier !== identifier) { throw new Error("It is not your turn!"); } 2;
+        if (currentPlayer.identifier !== identifier) { return; }
 
         if (currentPlayer.cards.length === 2) {
             currentPlayer.setSurrendered();
             clearTimeout(this.playerTurnTimeoutId);
             const nextPlayer = this.startNextPlayerTurn();
-            return { nextPlayer: nextPlayer, errorMsg: null};
+            return nextPlayer;
         }
-        return { nextPlayer: null, errorMsg: "Surrendering is no longer allowed!" };
+        return "Surrendering is no longer allowed!";
     }
 
     /**
      * If it is the turn of the player that has the supplied identifier, instructs the dealer they desire to stand.
      * @param identifier The identifier of the player desiring to stand.
-     * @return Information about the hit results.
-     * @throws Error if it is not the player's turn.
+     * @return Information about the hit results. or null if hitting failed.
      */
-    public hit(identifier: number): HitResult {
-        if (this.gameState !== GameState.PLAYER_TURNS) { throw new Error("It is not your turn!"); }
+    public hit(identifier: number): HitResult | null {
+        if (this.gameState !== GameState.PLAYER_TURNS) { return; }
         const theCurrentPlayer = this.currentPlayer;
         if (theCurrentPlayer.identifier !== identifier) {
-            throw new Error("It is not your turn!");
+            return;
         }
         clearTimeout(this.playerTurnTimeoutId);
 
@@ -226,7 +218,7 @@ export class BlackjackGame {
     }
 
     private thereAreNonBustedPlayersWithoutBlackjack(): boolean {
-        return this.myPlayers.findIndex((player) => player.handState == HandState.Normal) !== -1;
+        return this.myPlayers.findIndex((player) => player.handState === HandState.Normal) !== -1;
     }
 
     private getBustedPlayers(): Player[] {
@@ -244,7 +236,7 @@ export class BlackjackGame {
     }
 
     private getPlayersWithHigherScoreThanDealer(): Player[] {
-        return this.myPlayers.filter((player) => player.handState === HandState.Normal && 
+        return this.myPlayers.filter((player) => player.handState === HandState.Normal &&
             player.highestNonBustedHandValue > this.dealer.highestNonBustedHandValue);
     }
 

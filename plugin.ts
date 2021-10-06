@@ -111,32 +111,41 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
       }
     }
     const gameManager = this.getOrCreateGameManager(chat);
-    let reply: string;
 
     try {
       if (gameManager.canStartNewGame) {
-        const secondsUntilStart = gameManager.startNewGame(user, bet);
-        reply = `📢 @${user.name} is starting a game of Blackjack, starting in ${secondsUntilStart} seconds...` +
+        const startNewGameResult = gameManager.startNewGame(user, bet);
+
+        if (typeof(startNewGameResult) === "string") {
+          return `⚠️ ${startNewGameResult}`;
+        }
+        return `📢 @${user.name} is starting a game of Blackjack, starting in ${startNewGameResult} seconds...` +
           `\n\nMake a /${Plugin.BET_CMD} to join in.`;
       } else {
-        gameManager.joinGame(user, bet);
-        reply = `@${user.name} has joined the game of Blackjack!`;
+        const joinGameResult = gameManager.joinGame(user, bet);
+
+        if (joinGameResult) {
+          return `⚠️ ${joinGameResult}`;
+        }
+        return `@${user.name} has joined the game of Blackjack!`;
       }
     } catch (ex) {
-      reply = `⚠️ ${ex.message}`;
+      console.error(ex);
+      return `⚠️ ${ex.message}`;
     }
-    return reply;
   }
 
-  private stand(chat: Chat, user: User, msg: TelegramBot.Message, match: string): string | null {
+  private stand(chat: Chat, user: User, msg: TelegramBot.Message, match: string): string {
     const gameManager = this.getOrCreateGameManager(chat);
     try {
       const nextPlayer = gameManager.stand(user.id);
-      return this.pluginTexts.getNextPlayerTurnMessage(nextPlayer, true);
 
+      if (nextPlayer) {
+        return this.pluginTexts.getNextPlayerTurnMessage(nextPlayer, true);
+      }
     } catch (ex) {
       console.error(ex);
-      return null;
+      return `⚠️ ${ex.message}`;
     }
   }
 
@@ -145,14 +154,15 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
     try {
       const surrenderResult = gameManager.surrender(user.id);
 
-      if (surrenderResult.errorMsg) {
-        return `⚠️ ${surrenderResult.errorMsg}`;
+      if (typeof(surrenderResult) === "string") {
+        return `⚠️ ${surrenderResult}`;
       }
-      return this.pluginTexts.getNextPlayerTurnMessage(surrenderResult.nextPlayer, true);
-
+      if (surrenderResult) {
+        return this.pluginTexts.getNextPlayerTurnMessage(surrenderResult, true);
+      }
     } catch (ex) {
       console.error(ex);
-      return null;
+      return `⚠️ ${ex.message}`;
     }
   }
 
@@ -160,6 +170,10 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
     const gameManager = this.getOrCreateGameManager(chat);
     try {
       const info = gameManager.hit(user.id);
+
+      if (!info) {
+        return;
+      }
       let reply = `The dealer deals ${info.currentPlayer.formattedName} ${info.card.toString()}.`;
       reply += this.pluginTexts.handValuesAsString(info.currentPlayer);
 
@@ -173,7 +187,7 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
 
     } catch (ex) {
       console.error(ex);
-      return null;
+      return `⚠️ ${ex.message}`;
     }
   }
 
