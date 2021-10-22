@@ -22,7 +22,8 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
   private static readonly DOUBLE_DOWN_CMD = `bjdoubledown`;
   private static readonly STATISTICS_CMD = `bjstats`;
 
-  private static readonly ALL_IN_TEXTS = ["all", "allin", "all-in", "all in"];
+  private static readonly ALL_IN_TEXTS = ["all", "allin", "all-in", "all in", "kaas"];
+  private static readonly HALF_IN_TEXTS = ["half", "halfin", "half-in", "half in", "ik wil doubledown doen", "ik wil double down doen", "doubledown", "tosti"];
 
   private readonly deckFactory = new DeckFactory();
   private readonly pluginTexts = new PluginTexts(Plugin.HIT_CMD, Plugin.STAND_CMD, Plugin.SURRENDER_CMD, Plugin.DOUBLE_DOWN_CMD);
@@ -111,6 +112,8 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
     if (isNaN(bet)) {
       if (Plugin.ALL_IN_TEXTS.includes(match)) {
         bet = user.score;
+      } if else (Plugin.HALF_IN_TEXTS.includes(match)) { 
+        bet = user.score/2;
       } else {
         return "⚠️ Your bet has to be a numeric value, smartass.";
       }
