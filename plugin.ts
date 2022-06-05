@@ -106,9 +106,9 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
     if (!match) {
       return `⚠️ Not enough arguments! Format: /${Plugin.BET_CMD} [value]`;
     }
-    let bet = Number(match);
+    let bet = this.parseScoreInput(match);
 
-    if (isNaN(bet)) {
+    if (bet === null) {
       if (Plugin.ALL_IN_TEXTS.includes(match)) {
         bet = user.score;
       } else {
