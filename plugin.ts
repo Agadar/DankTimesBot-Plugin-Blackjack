@@ -22,8 +22,6 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
   private static readonly DOUBLE_DOWN_CMD = `bjdoubledown`;
   private static readonly STATISTICS_CMD = `bjstats`;
 
-  private static readonly ALL_IN_TEXTS = ["all", "allin", "all-in", "all in"];
-
   private readonly deckFactory = new DeckFactory();
   private readonly pluginTexts = new PluginTexts(Plugin.HIT_CMD, Plugin.STAND_CMD, Plugin.SURRENDER_CMD, Plugin.DOUBLE_DOWN_CMD);
   private readonly gameManagers = new Map<number, ChatGameManager>();
@@ -106,14 +104,10 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
     if (!match) {
       return `⚠️ Not enough arguments! Format: /${Plugin.BET_CMD} [value]`;
     }
-    let bet = Number(match);
+    const bet = this.parseScoreInput(match, user.score);
 
     if (isNaN(bet)) {
-      if (Plugin.ALL_IN_TEXTS.includes(match)) {
-        bet = user.score;
-      } else {
-        return "⚠️ Your bet has to be a numeric value, smartass.";
-      }
+      return "⚠️ Your bet has to be a numeric value, smartass.";
     }
     const gameManager = this.getOrCreateGameManager(chat);
 
