@@ -14,6 +14,7 @@ import { PluginTexts } from "./util/plugin-texts";
 
 export class Plugin extends AbstractPlugin implements IBlackjackGameListener<ChatGameManager> {
 
+    // Commands
     private static readonly INFO_CMD = "blackjack";
     private static readonly BET_CMD = "bjbet";
     private static readonly STAND_CMD = "bjstand";
@@ -22,12 +23,14 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
     private static readonly DOUBLE_DOWN_CMD = "bjdoubledown";
     private static readonly STATISTICS_CMD = "bjstats";
 
+    // Misc.
     private readonly deckFactory = new DeckFactory();
     private readonly pluginTexts = new PluginTexts(Plugin.HIT_CMD, Plugin.STAND_CMD, Plugin.SURRENDER_CMD, Plugin.DOUBLE_DOWN_CMD);
     private readonly gameManagers = new Map<number, ChatGameManager>();
+    private readonly previousBets = new Map<number, number>();
 
     constructor() {
-        super("Blackjack", "1.1.0-alpha");
+        super("Blackjack", "1.1.0");
     }
 
     /**
@@ -92,21 +95,21 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
 
     private blackjackInfo(chat: Chat, user: User, msg: TelegramBot.Message, match: string): string {
         return "♣️♥ It's basic Blackjack ♠️️♦️\n\n"
-      + `/${Plugin.BET_CMD} to start or join a game with a specified bet\n`
-      + `/${Plugin.STAND_CMD} to take no more cards (when it's your turn)\n`
-      + `/${Plugin.HIT_CMD} to take another card (when it's your turn)\n`
-      + `/${Plugin.SURRENDER_CMD} to surrender (when it's your first turn)\n`
-      + `/${Plugin.DOUBLE_DOWN_CMD} to double down (when it's your first turn)\n`
-      + `/${Plugin.STATISTICS_CMD} to see some statistics of this chat`;
+            + `/${Plugin.BET_CMD} to start or join a game with a specified bet\n`
+            + `/${Plugin.STAND_CMD} to take no more cards (when it's your turn)\n`
+            + `/${Plugin.HIT_CMD} to take another card (when it's your turn)\n`
+            + `/${Plugin.SURRENDER_CMD} to surrender (when it's your first turn)\n`
+            + `/${Plugin.DOUBLE_DOWN_CMD} to double down (when it's your first turn)\n`
+            + `/${Plugin.STATISTICS_CMD} to see some statistics of this chat`;
     }
 
     private bet(chat: Chat, user: User, msg: TelegramBot.Message, match: string): string {
         if (!match) {
             return `⚠️ Not enough arguments! Format: /${Plugin.BET_CMD} [value]`;
         }
-        const bet = this.parseScoreInput(match, user.score);
+        const bet = this.parseScoreInput(match, user.score, this.previousBets.get(user.id));
 
-        if (isNaN(bet)) {
+        if (bet === null || isNaN(bet)) {
             return "⚠️ Your bet has to be a numeric value, smartass.";
         }
         const gameManager = this.getOrCreateGameManager(chat);
@@ -115,17 +118,19 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
             if (gameManager.canStartNewGame) {
                 const startNewGameResult = gameManager.startNewGame(user, bet);
 
-                if (typeof(startNewGameResult) === "string") {
+                if (typeof (startNewGameResult) === "string") {
                     return `⚠️ ${startNewGameResult}`;
                 }
+                this.previousBets.set(user.id, bet as number);
                 return `📢 @${user.name} is starting a game of Blackjack, starting in ${startNewGameResult} seconds...` +
-          `\n\nMake a /${Plugin.BET_CMD} to join in.`;
+                    `\n\nMake a /${Plugin.BET_CMD} to join in.`;
             } else {
                 const joinGameResult = gameManager.joinGame(user, bet);
 
                 if (joinGameResult) {
                     return `⚠️ ${joinGameResult}`;
                 }
+                this.previousBets.set(user.id, bet as number);
                 return `@${user.name} has joined the game of Blackjack!`;
             }
         } catch (ex) {
@@ -134,7 +139,7 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
         }
     }
 
-    private stand(chat: Chat, user: User, msg: TelegramBot.Message, match: string): string {
+    private stand(chat: Chat, user: User, msg: TelegramBot.Message, match: string): string | undefined {
         const gameManager = this.getOrCreateGameManager(chat);
         try {
             const nextPlayer = gameManager.stand(user.id);
@@ -149,12 +154,12 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
         }
     }
 
-    private surrender(chat: Chat, user: User, msg: TelegramBot.Message, match: string): string | null {
+    private surrender(chat: Chat, user: User, msg: TelegramBot.Message, match: string): string | undefined {
         const gameManager = this.getOrCreateGameManager(chat);
         try {
             const surrenderResult = gameManager.surrender(user.id);
 
-            if (typeof(surrenderResult) === "string") {
+            if (typeof (surrenderResult) === "string") {
                 return `⚠️ ${surrenderResult}`;
             }
             if (surrenderResult) {
@@ -173,7 +178,7 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
             const info = gameManager.hit(user.id);
 
             if (!info) {
-                return;
+                return null;
             }
             let reply = `The dealer deals ${info.currentPlayer.formattedName} ${info.card.toString()}.`;
             reply += this.pluginTexts.handValuesAsString(info.currentPlayer);
@@ -199,11 +204,11 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
         try {
             const info = gameManager.doubleDown(user);
 
-            if (typeof(info) === "string") {
+            if (typeof (info) === "string") {
                 return `⚠️ ${info}`;
             }
             if (!info) {
-                return;
+                return null;
             }
             let reply = `The dealer deals ${info.currentPlayer.formattedName} ${info.card.toString()}.`;
             reply += this.pluginTexts.handValuesAsString(info.currentPlayer);
