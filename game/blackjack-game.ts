@@ -77,9 +77,6 @@ export class BlackjackGame {
         if (!this.isJoinable) {
             return "It's no longer possible to join the game!";
         }
-        if (this.myPlayers.findIndex((entry) => entry.identifier === player.identifier) !== -1) {
-            return "You're already partaking in this game!";
-        }
         this.myPlayers.push(player);
         return null;
     }

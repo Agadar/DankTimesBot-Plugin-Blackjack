@@ -76,6 +76,8 @@ export class PluginTexts {
 
     private getPlayerResultList(players: Player[], result: string) {
         if (players.length === 0) { return ""; }
-        return `${players.map((player) => player.formattedName).join(", ")} ${result}`;
+        const nonUniqueNames = players.map((player) => player.formattedName);
+        const uniqueNames = Array.from(new Set(nonUniqueNames));
+        return `${uniqueNames.join(", ")} ${result}`;
     }
 }
