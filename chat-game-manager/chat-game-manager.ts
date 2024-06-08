@@ -56,7 +56,7 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
         }
         const createPlayerResult = this.createPlayerFromUser(user, bet);
 
-        if (typeof(createPlayerResult) === "string") {
+        if (typeof (createPlayerResult) === "string") {
             return createPlayerResult;
         }
         const errorMsg = this.createGame(createPlayerResult);
@@ -66,7 +66,7 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
         }
         const initializeGameResult = (this.game as BlackjackGame).initializeGame();
 
-        if (typeof(initializeGameResult) === "string") {
+        if (typeof (initializeGameResult) === "string") {
             return initializeGameResult;
         }
         createPlayerResult.confiscateBet();
@@ -86,7 +86,7 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
         }
         const createPlayerResult = this.createPlayerFromUser(user, bet);
 
-        if (typeof(createPlayerResult) === "string") {
+        if (typeof (createPlayerResult) === "string") {
             return createPlayerResult;
         }
         const joinGameResult = (this.game as BlackjackGame).joinGame(createPlayerResult);
@@ -223,8 +223,7 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
     }
 
     private createGame(player: Player): string | null {
-        const deck = this.deckFactory.createDeck();
-        this.game = new BlackjackGame(deck);
+        this.game = new BlackjackGame(this.deckFactory);
         const errorMsg = this.game.joinGame(player);
 
         if (errorMsg) {

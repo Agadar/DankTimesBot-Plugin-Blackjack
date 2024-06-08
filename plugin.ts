@@ -30,7 +30,7 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
     private readonly previousBets = new Map<number, number>();
 
     constructor() {
-        super("Blackjack", "1.1.0");
+        super("Blackjack", "1.2.0");
     }
 
     /**

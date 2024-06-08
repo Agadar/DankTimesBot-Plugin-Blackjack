@@ -1,5 +1,6 @@
 import { User } from "../../../src/chat/user/user";
 import { Deck } from "../deck/deck";
+import { DeckFactory } from "../deck/deckFactory";
 import { HandState } from "../player/hand-state";
 import { Player } from "../player/player";
 import { IBlackjackGameListener } from "./blackjack-game-listener";
@@ -12,8 +13,6 @@ import { HitResult } from "./hit-result";
  */
 export class BlackjackGame {
 
-    private static readonly MAX_PLAYERS = 3;
-
     private static readonly TIME_WAIT_FOR_PLAYERS_MS = 15000;
     private static readonly TIME_PLAYER_TURN_MS = 15000;
     private static readonly TIME_BETWEEN_ACTIONS = 3000;
@@ -25,8 +24,9 @@ export class BlackjackGame {
     private gameState = GameState.INITIALIZING;
     private playerTurnIndex = -1;
     private playerTurnTimeoutId: NodeJS.Timeout;
+    private deck: Deck;
 
-    constructor(private readonly deck: Deck) {}
+    constructor(private readonly deckFactory: DeckFactory) { }
 
     /**
      * Subscribes to this blackjack game to receive asynchronous updates.
@@ -49,8 +49,7 @@ export class BlackjackGame {
      * Whether this game is (still) joinable.
      */
     public get isJoinable(): boolean {
-        return (this.gameState === GameState.INITIALIZING || this.gameState === GameState.AWAITING_PLAYERS)
-            && this.myPlayers.length < BlackjackGame.MAX_PLAYERS;
+        return (this.gameState === GameState.INITIALIZING || this.gameState === GameState.AWAITING_PLAYERS);
     }
 
     /**
@@ -173,6 +172,7 @@ export class BlackjackGame {
 
     private dealCards(): void {
         this.gameState = GameState.DEALING_CARDS;
+        this.deck = this.deckFactory.createDeck(this.myPlayers.length);
         this.deck.shuffle();
         this.myPlayers.forEach((player) => player.giveCards(this.deck.drawCard()));
         this.dealer.giveCards(this.deck.drawCard());
