@@ -96,6 +96,7 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
         }
         createPlayerResult.confiscateBet();
         this.statistics.updateDealerBalance(bet);
+        return null;
     }
 
     /**
@@ -107,6 +108,7 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
         if (this.gameIsRunning) {
             return (this.game as BlackjackGame).stand(userId);
         }
+        return null;
     }
 
     /**
@@ -119,6 +121,7 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
         if (this.gameIsRunning) {
             return (this.game as BlackjackGame).surrender(userId);
         }
+        return null;
     }
 
     /**
@@ -130,6 +133,7 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
         if (this.gameIsRunning) {
             return (this.game as BlackjackGame).hit(userId);
         }
+        return null;
     }
 
     /**
@@ -142,6 +146,7 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
         if (this.gameIsRunning) {
             return (this.game as BlackjackGame).doubleDown(user);
         }
+        return null;
     }
 
     /**

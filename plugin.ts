@@ -54,7 +54,7 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
     public onCardsDealt(source: ChatGameManager, dealer: Player, startingPlayer: Player): void {
         const dealerLine = this.pluginTexts.getCardsDealtPlayerTextLine(dealer);
         const playerLines = source.players.map((player) => this.pluginTexts.getCardsDealtPlayerTextLine(player)).join("\n");
-        const user = this.getChat(source.chatId).getOrCreateUser(startingPlayer.identifier);
+        const user = this.getChat(source.chatId)!.getOrCreateUser(startingPlayer.identifier);
         const playerTurnMsg = this.pluginTexts.getNextPlayerTurnMessage(startingPlayer, true, user.score >= startingPlayer.bet);
         const cardsInfo = `The game has begun!\n\n${dealerLine}\n${playerLines}\n\n${playerTurnMsg}`;
         this.sendMessage(source.chatId, cardsInfo);
@@ -87,7 +87,7 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
    * @implements IBlackjackGameListener
    */
     public onPlayerTurnTimedOut(source: ChatGameManager, timedOutPlayer: Player, nextPlayer: Player) {
-        const user = this.getChat(source.chatId).getOrCreateUser(nextPlayer.identifier);
+        const user = this.getChat(source.chatId)!.getOrCreateUser(nextPlayer.identifier);
         const playerTurnMsg = this.pluginTexts.getNextPlayerTurnMessage(nextPlayer, true, user.score >= nextPlayer.bet);
         const message = `${timedOutPlayer.formattedName} took too long to decide.\n\n${playerTurnMsg}`;
         this.sendMessage(source.chatId, message);

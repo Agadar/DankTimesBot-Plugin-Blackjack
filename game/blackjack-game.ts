@@ -87,9 +87,9 @@ export class BlackjackGame {
      * @return The player that is next, which can also be the dealer, or null if the current player cannot stand.
      */
     public stand(identifier: number): Player | null {
-        if (this.gameState !== GameState.PLAYER_TURNS) { return; }
+        if (this.gameState !== GameState.PLAYER_TURNS) { return null; }
         const currentPlayer = this.currentPlayer;
-        if (currentPlayer.identifier !== identifier) { return; }
+        if (currentPlayer.identifier !== identifier) { return null; }
         clearTimeout(this.playerTurnTimeoutId);
         return this.startNextPlayerTurn();
     }
@@ -101,9 +101,9 @@ export class BlackjackGame {
      * requires informing the users, or null if an error occured that does not require that.
      */
     public surrender(identifier: number): Player | string | null {
-        if (this.gameState !== GameState.PLAYER_TURNS) { return; }
+        if (this.gameState !== GameState.PLAYER_TURNS) { return null; }
         const currentPlayer = this.currentPlayer;
-        if (currentPlayer.identifier !== identifier) { return; }
+        if (currentPlayer.identifier !== identifier) { return null; }
 
         if (currentPlayer.isFirstTurn) {
             currentPlayer.setSurrendered();
@@ -120,10 +120,10 @@ export class BlackjackGame {
      * @return Information about the hit results. or null if hitting failed.
      */
     public hit(identifier: number): HitResult | null {
-        if (this.gameState !== GameState.PLAYER_TURNS) { return; }
+        if (this.gameState !== GameState.PLAYER_TURNS) { return null; }
         const theCurrentPlayer = this.currentPlayer;
         if (theCurrentPlayer.identifier !== identifier) {
-            return;
+            return null;
         }
         clearTimeout(this.playerTurnTimeoutId);
 
@@ -147,10 +147,10 @@ export class BlackjackGame {
      * be informed, or null if doubling down failed but no informing is necessary.
      */
     public doubleDown(user: User): HitResult | string | null {
-        if (this.gameState !== GameState.PLAYER_TURNS) { return; }
+        if (this.gameState !== GameState.PLAYER_TURNS) { return null; }
         const theCurrentPlayer = this.currentPlayer;
         if (theCurrentPlayer.identifier !== user.id) {
-            return;
+            return null;
         }
         if (!theCurrentPlayer.isFirstTurn) {
             return "Doubling down is no longer allowed!";
