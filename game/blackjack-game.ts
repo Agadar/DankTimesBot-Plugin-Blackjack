@@ -23,8 +23,8 @@ export class BlackjackGame {
 
     private gameState = GameState.INITIALIZING;
     private playerTurnIndex = -1;
-    private playerTurnTimeoutId: NodeJS.Timeout;
-    private deck: Deck;
+    private playerTurnTimeoutId: NodeJS.Timeout | undefined;
+    private deck: Deck | undefined;
 
     constructor(private readonly deckFactory: DeckFactory) { }
 
@@ -127,7 +127,7 @@ export class BlackjackGame {
         }
         clearTimeout(this.playerTurnTimeoutId);
 
-        const drawnCard = this.deck.drawCard();
+        const drawnCard = this.deck?.drawCard()!;
         theCurrentPlayer.giveCards(drawnCard);
         let theNextPlayer: Player;
 
@@ -161,7 +161,7 @@ export class BlackjackGame {
         clearTimeout(this.playerTurnTimeoutId);
 
         theCurrentPlayer.doubleDown();
-        const drawnCard = this.deck.drawCard();
+        const drawnCard = this.deck?.drawCard()!;
         theCurrentPlayer.giveCards(drawnCard);
         const theNextPlayer = this.startNextPlayerTurn();
         return { card: drawnCard, currentPlayer: theCurrentPlayer, nextPlayer: theNextPlayer };
@@ -171,9 +171,9 @@ export class BlackjackGame {
         this.gameState = GameState.DEALING_CARDS;
         this.deck = this.deckFactory.createDeck(this.myPlayers.length);
         this.deck.shuffle();
-        this.myPlayers.forEach((player) => player.giveCards(this.deck.drawCard()));
+        this.myPlayers.forEach((player) => player.giveCards(this.deck?.drawCard()!));
         this.dealer.giveCards(this.deck.drawCard());
-        this.myPlayers.forEach((player) => player.giveCards(this.deck.drawCard()));
+        this.myPlayers.forEach((player) => player.giveCards(this.deck?.drawCard()!));
         this.gameState = GameState.PLAYER_TURNS;
         const currentPlayer = this.startNextPlayerTurn();
         this.listeners.forEach((listener) => listener.onCardsDealt(this, this.dealer, currentPlayer));
@@ -212,7 +212,7 @@ export class BlackjackGame {
 
         if (this.thereAreNonBustedPlayersWithoutBlackjack()) {
             while (this.dealer.handState === HandState.Normal && !this.dealer.hasReachedDealerMinimum) {
-                const newCard = this.deck.drawCard();
+                const newCard = this.deck?.drawCard()!;
                 this.dealer.giveCards(newCard);
                 this.listeners.forEach((listener) => listener.onDealerDrewCard(this, this.dealer, newCard));
                 await this.asyncSleep(BlackjackGame.TIME_BETWEEN_ACTIONS);

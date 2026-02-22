@@ -133,13 +133,13 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
                 this.previousBets.set(user.id, bet as number);
                 return `@${user.name} has joined the game of Blackjack!`;
             }
-        } catch (ex) {
+        } catch (ex: any) {
             console.error(ex);
             return `⚠️ ${ex.message}`;
         }
     }
 
-    private stand(chat: Chat, user: User, msg: TelegramBot.Message, match: string): string | undefined {
+    private stand(chat: Chat, user: User, msg: TelegramBot.Message, match: string): string {
         const gameManager = this.getOrCreateGameManager(chat);
         try {
             const nextPlayer = gameManager.stand(user.id);
@@ -148,13 +148,14 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
                 const nextUser = chat.getOrCreateUser(nextPlayer.identifier);
                 return this.pluginTexts.getNextPlayerTurnMessage(nextPlayer, true, nextUser.score >= nextPlayer.bet);
             }
-        } catch (ex) {
+            return "";
+        } catch (ex: any) {
             console.error(ex);
             return `⚠️ ${ex.message}`;
         }
     }
 
-    private surrender(chat: Chat, user: User, msg: TelegramBot.Message, match: string): string | undefined {
+    private surrender(chat: Chat, user: User, msg: TelegramBot.Message, match: string): string {
         const gameManager = this.getOrCreateGameManager(chat);
         try {
             const surrenderResult = gameManager.surrender(user.id);
@@ -166,19 +167,21 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
                 const nextUser = chat.getOrCreateUser(surrenderResult.identifier);
                 return this.pluginTexts.getNextPlayerTurnMessage(surrenderResult, true, nextUser.score >= surrenderResult.bet);
             }
-        } catch (ex) {
+            return "";
+
+        } catch (ex: any) {
             console.error(ex);
             return `⚠️ ${ex.message}`;
         }
     }
 
-    private hit(chat: Chat, user: User, msg: TelegramBot.Message, match: string): string | null {
+    private hit(chat: Chat, user: User, msg: TelegramBot.Message, match: string): string {
         const gameManager = this.getOrCreateGameManager(chat);
         try {
             const info = gameManager.hit(user.id);
 
             if (!info) {
-                return null;
+                return "";
             }
             let reply = `The dealer deals ${info.currentPlayer.formattedName} ${info.card.toString()}.`;
             reply += this.pluginTexts.handValuesAsString(info.currentPlayer);
@@ -193,13 +196,13 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
             }
             return reply;
 
-        } catch (ex) {
+        } catch (ex: any) {
             console.error(ex);
             return `⚠️ ${ex.message}`;
         }
     }
 
-    private doubleDown(chat: Chat, user: User, msg: TelegramBot.Message, match: string): string | null {
+    private doubleDown(chat: Chat, user: User, msg: TelegramBot.Message, match: string): string {
         const gameManager = this.getOrCreateGameManager(chat);
         try {
             const info = gameManager.doubleDown(user);
@@ -208,7 +211,7 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
                 return `⚠️ ${info}`;
             }
             if (!info) {
-                return null;
+                return "";
             }
             let reply = `The dealer deals ${info.currentPlayer.formattedName} ${info.card.toString()}.`;
             reply += this.pluginTexts.handValuesAsString(info.currentPlayer);
@@ -218,7 +221,7 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
             reply += `\n\n${nextPlayerTurnMsg}`;
             return reply;
 
-        } catch (ex) {
+        } catch (ex: any) {
             console.error(ex);
             return `⚠️ ${ex.message}`;
         }
