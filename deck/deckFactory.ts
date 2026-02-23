@@ -19,7 +19,7 @@ export class DeckFactory {
         for (let i = 0; i < numberOfCardSets; i++) {
             for (const suit of Object.values(Suit)) {
                 for (const rank of Object.values(Rank)) {
-                    const card = new Card(suit, rank);
+                    const card = new Card(suit, rank, false);
                     cards.push(card);
                 }
             }

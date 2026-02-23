@@ -127,8 +127,8 @@ export class BlackjackGame {
         }
         clearTimeout(this.playerTurnTimeoutId);
 
-        const drawnCard = this.deck?.drawCard()!;
-        theCurrentPlayer.giveCards(drawnCard);
+        const drawnCard = this.deck?.drawCard(true)!;
+        theCurrentPlayer.giveCard(drawnCard);
         let theNextPlayer: Player;
 
         if (theCurrentPlayer.handState === HandState.Busted) {
@@ -161,8 +161,8 @@ export class BlackjackGame {
         clearTimeout(this.playerTurnTimeoutId);
 
         theCurrentPlayer.doubleDown();
-        const drawnCard = this.deck?.drawCard()!;
-        theCurrentPlayer.giveCards(drawnCard);
+        const drawnCard = this.deck?.drawCard(true)!;
+        theCurrentPlayer.giveCard(drawnCard);
         const theNextPlayer = this.startNextPlayerTurn();
         return { card: drawnCard, currentPlayer: theCurrentPlayer, nextPlayer: theNextPlayer };
     }
@@ -171,9 +171,12 @@ export class BlackjackGame {
         this.gameState = GameState.DEALING_CARDS;
         this.deck = this.deckFactory.createDeck(this.myPlayers.length);
         this.deck.shuffle();
-        this.myPlayers.forEach((player) => player.giveCards(this.deck?.drawCard()!));
-        this.dealer.giveCards(this.deck.drawCard());
-        this.myPlayers.forEach((player) => player.giveCards(this.deck?.drawCard()!));
+
+        this.myPlayers.forEach((player) => player.giveCard(this.deck?.drawCard(true)!));
+        this.dealer.giveCard(this.deck.drawCard(true));
+        this.myPlayers.forEach((player) => player.giveCard(this.deck?.drawCard(true)!));
+        this.dealer.giveCard(this.deck.drawCard(false));
+
         this.gameState = GameState.PLAYER_TURNS;
         const currentPlayer = this.startNextPlayerTurn();
         this.listeners.forEach((listener) => listener.onCardsDealt(this, this.dealer, currentPlayer));
@@ -194,31 +197,40 @@ export class BlackjackGame {
         let currentPlayer = this.currentPlayer;
 
         if (currentPlayer === this.dealer) {
-            this.scheduleDealerTurn();
+            this.gameState = GameState.DEALER_TURN;
+            setTimeout(this.revealHoleCard.bind(this), BlackjackGame.TIME_BETWEEN_ACTIONS);
+
         } else if (!currentPlayer.mayDrawCard) {
             currentPlayer = this.startNextPlayerTurn();
+
         } else {
             this.schedulePlayerTurnTimeout();
         }
         return currentPlayer;
     }
 
-    private scheduleDealerTurn(): void {
-        setTimeout(this.executeDealerTurn.bind(this), BlackjackGame.TIME_BETWEEN_ACTIONS);
+    private async revealHoleCard(): Promise<void> {
+        if (this.thereAreNonBustedPlayersWithoutBlackjack()) {
+            const holeCard = this.dealer.revealHoleCard();
+            this.listeners.forEach((listener) => listener.onHoleCardRevealed(this, this.dealer, holeCard));
+            setTimeout(this.executeDealerTurn.bind(this), BlackjackGame.TIME_BETWEEN_ACTIONS);
+
+        } else {
+            this.endGame();
+        }
     }
 
     private async executeDealerTurn(): Promise<void> {
-        this.gameState = GameState.DEALER_TURN;
-
-        if (this.thereAreNonBustedPlayersWithoutBlackjack()) {
-            while (this.dealer.handState === HandState.Normal && !this.dealer.hasReachedDealerMinimum) {
-                const newCard = this.deck?.drawCard()!;
-                this.dealer.giveCards(newCard);
-                this.listeners.forEach((listener) => listener.onDealerDrewCard(this, this.dealer, newCard));
-                await this.asyncSleep(BlackjackGame.TIME_BETWEEN_ACTIONS);
-            }
+        while (this.dealer.handState === HandState.Normal && !this.dealer.hasReachedDealerMinimum) {
+            const newCard = this.deck?.drawCard(true)!;
+            this.dealer.giveCard(newCard);
+            this.listeners.forEach((listener) => listener.onDealerDrewCard(this, this.dealer, newCard));
+            await this.asyncSleep(BlackjackGame.TIME_BETWEEN_ACTIONS);
         }
+        this.endGame();
+    }
 
+    private endGame(): void {
         this.gameState = GameState.ENDED;
         const conclusion = this.getGameConclusion();
         this.listeners.forEach((listener) => listener.onGameEnded(this, conclusion));

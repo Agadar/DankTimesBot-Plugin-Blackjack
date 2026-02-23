@@ -34,8 +34,8 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
     }
 
     /**
-   * @override
-   */
+     * @override
+     */
     public getPluginSpecificCommands(): BotCommand[] {
         const infoCmd = new BotCommand([Plugin.INFO_CMD], "prints info about the Blackjack plugin",
             this.blackjackInfo.bind(this));
@@ -49,8 +49,8 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
     }
 
     /**
-   * @implements IBlackjackGameListener
-   */
+     * @implements IBlackjackGameListener
+     */
     public onCardsDealt(source: ChatGameManager, dealer: Player, startingPlayer: Player): void {
         const dealerLine = this.pluginTexts.getCardsDealtPlayerTextLine(dealer);
         const playerLines = source.players.map((player) => this.pluginTexts.getCardsDealtPlayerTextLine(player)).join("\n");
@@ -61,17 +61,34 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
     }
 
     /**
-   * @implements IBlackjackGameListener
-   */
-    public onDealerDrewCard(source: ChatGameManager, dealer: Player, card: Card): void {
-        let message = `The dealer drew ${card.toString()}.`;
-        message += this.pluginTexts.handValuesAsString(dealer);
+     * @implements IBlackjackGameListener
+     */
+    public onPlayerTurnTimedOut(source: ChatGameManager, timedOutPlayer: Player, nextPlayer: Player) {
+        const user = this.getChat(source.chatId)!.getOrCreateUser(nextPlayer.identifier);
+        const playerTurnMsg = this.pluginTexts.getNextPlayerTurnMessage(nextPlayer, true, user.score >= nextPlayer.bet);
+        const message = `${timedOutPlayer.formattedName} took too long to decide.\n\n${playerTurnMsg}`;
         this.sendMessage(source.chatId, message);
     }
 
     /**
-   * @implements IBlackjackGameListener
-   */
+     * @implements IBlackjackGameListener
+     */
+    public onHoleCardRevealed(source: ChatGameManager, dealer: Player, holeCard: Card): void {
+        const message = `The dealer reveals the hole card: ${holeCard.toString()}.${dealer.formattedHandValues}`;
+        this.sendMessage(source.chatId, message);
+    }
+
+    /**
+     * @implements IBlackjackGameListener
+     */
+    public onDealerDrewCard(source: ChatGameManager, dealer: Player, card: Card): void {
+        const message = `The dealer draws ${card.toString()}.${dealer.formattedHandValues}`;
+        this.sendMessage(source.chatId, message);
+    }
+
+    /**
+     * @implements IBlackjackGameListener
+     */
     public onGameEnded(source: ChatGameManager, conclusion: GameConclusion): void {
         let message;
         if (conclusion.dealerBusted) {
@@ -80,16 +97,6 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
             message = "The dealer stands. The game has ended.\n\n";
         }
         message += this.pluginTexts.getGameConclusionText(conclusion);
-        this.sendMessage(source.chatId, message);
-    }
-
-    /**
-   * @implements IBlackjackGameListener
-   */
-    public onPlayerTurnTimedOut(source: ChatGameManager, timedOutPlayer: Player, nextPlayer: Player) {
-        const user = this.getChat(source.chatId)!.getOrCreateUser(nextPlayer.identifier);
-        const playerTurnMsg = this.pluginTexts.getNextPlayerTurnMessage(nextPlayer, true, user.score >= nextPlayer.bet);
-        const message = `${timedOutPlayer.formattedName} took too long to decide.\n\n${playerTurnMsg}`;
         this.sendMessage(source.chatId, message);
     }
 
@@ -184,7 +191,7 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
                 return "";
             }
             let reply = `The dealer deals ${info.currentPlayer.formattedName} ${info.card.toString()}.`;
-            reply += this.pluginTexts.handValuesAsString(info.currentPlayer);
+            reply += info.currentPlayer.formattedHandValues;
 
             if (info.currentPlayer.handState === HandState.Busted) {
                 const nextUser = chat.getOrCreateUser(info.nextPlayer.identifier);
@@ -214,7 +221,7 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
                 return "";
             }
             let reply = `The dealer deals ${info.currentPlayer.formattedName} ${info.card.toString()}.`;
-            reply += this.pluginTexts.handValuesAsString(info.currentPlayer);
+            reply += info.currentPlayer.formattedHandValues;
             const nextUser = chat.getOrCreateUser(info.nextPlayer.identifier);
             const nextPlayerTurnMsg = this.pluginTexts.getNextPlayerTurnMessage(
                 info.nextPlayer, true, nextUser.score >= info.nextPlayer.bet);

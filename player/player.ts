@@ -16,7 +16,7 @@ export class Player {
 
     private static readonly BET_CONFISCATION_REASON = "bet.confiscation";
 
-    private readonly mycards = new Array<Card>();
+    private readonly cards = new Array<Card>();
 
     private myHandState = HandState.Normal;
     private myNonBustedHandValues: number[] = [];
@@ -40,27 +40,7 @@ export class Player {
         public readonly identifier = Player.DEALER_IDENTIFIER,
         private readonly name = Player.DEALER_NAME,
         private myBet = 0,
-        private readonly updateScoreFunction?: ((points: number, reason: string) => void)) {}
-
-    /**
-     * Gives the specified playing cards to this player.
-     * @param cards The card to give to the player.
-     */
-    public giveCards(...cards: Card[]): void {
-        cards.forEach((card) => this.mycards.push(card));
-        const handValues = this.calculatePossibleHandValues();
-        this.recalculateIsBusted(handValues);
-        this.recalculateNonBustedHandValues(handValues);
-        this.recalculateHasReachedDealerMinimum(handValues);
-        this.recalculateHasBlackjack();
-    }
-
-    /**
-     * The player's current cards.
-     */
-    public get cards(): Card[] {
-        return this.mycards.slice(0, this.mycards.length);
-    }
+        private readonly updateScoreFunction?: ((points: number, reason: string) => void)) { }
 
     /**
      * The player's hand state.
@@ -74,21 +54,6 @@ export class Player {
      */
     public get bet(): number {
         return this.myBet;
-    }
-
-    /**
-     * Sets this player as having surrendered.
-     */
-    public setSurrendered() {
-        this.myHandState = HandState.Surrendered;
-    }
-
-    /**
-     * Instructs this player they're doubling down.
-     */
-    public doubleDown(): void {
-        this.confiscateBet();
-        this.myBet *= 2;
     }
 
     /**
@@ -128,6 +93,38 @@ export class Player {
     }
 
     /**
+     * Gets the string-formatted representation of this player's hand (e.g. '♠️ Jack and ♦️ Queen.   (20)').
+     */
+    public get formattedHand(): string {
+        let formatted = this.cards[0].toString();
+
+        if (this.cards.length > 1) {
+            let cardIndex = 1;
+
+            for (; cardIndex < this.cards.length - 1; cardIndex++) {
+                formatted += ", " + this.cards[cardIndex].toString();
+            }
+            formatted += " and " + this.cards[cardIndex].toString();
+        }
+        formatted += ".";
+
+        if (!this.cards.find((card) => !card.faceUp)) {
+            formatted += this.formattedHandValues;    // Do not show hand value if hole card is not yet revealed.
+        }
+        return formatted;
+    }
+
+    /**
+     * Gets the string-formatted representation of this player's hand's values(s), prefixed with additional spaces (e.g. '   (21 or 11)').
+     */
+    public get formattedHandValues(): string {
+        if (this.handState !== HandState.Busted) {
+            return `   (${this.nonBustedHandValues.map((value) => value.toString()).join(" or ")})`;
+        }
+        return ` ${this.formattedName} busted.`;
+    }
+
+    /**
      * Gets whether this player is the dealer.
      */
     public get isDealer(): boolean {
@@ -140,6 +137,56 @@ export class Player {
      */
     public get mayDrawCard(): boolean {
         return this.myHandState === HandState.Normal;
+    }
+
+    /**
+     * True if its the player's first turn, else false.
+     */
+    public get isFirstTurn(): boolean {
+        return this.cards.length === 2;
+    }
+
+    /**
+     * Sets this player as having surrendered.
+     */
+    public setSurrendered() {
+        this.myHandState = HandState.Surrendered;
+    }
+
+    /**
+     * Instructs this player they're doubling down.
+     */
+    public doubleDown(): void {
+        this.confiscateBet();
+        this.myBet *= 2;
+    }
+
+    /**
+     * Gives the specified playing card to this player.
+     * @param card The card to give to the player.
+     */
+    public giveCard(card: Card): void {
+        this.cards.push(card);
+        this.recalculateAll();
+    }
+
+    /**
+     * Reveals the hole card. Only applicable for the dealer, not for normal players.
+     * @returns The revealed hole card.
+     * @throws An error if this player is not the dealer or if the hole card is already revealed.
+     */
+    public revealHoleCard(): Card {
+        if (!this.isDealer) {
+            throw new Error("Only the dealer can reveal a hole card.");
+        }
+        const holeCard = this.cards.find((card) => !card.faceUp);
+
+        if (!holeCard) {
+            throw new Error("Dealer does not have a hole card to reveal.");
+        }
+        holeCard.faceUp = true;
+        this.recalculateAll();
+        return holeCard;
     }
 
     /**
@@ -167,16 +214,18 @@ export class Player {
         return reward;
     }
 
-    /**
-     * True if its the player's first turn, else false.
-     */
-    public get isFirstTurn(): boolean {
-        return this.cards.length === 2;
+    private recalculateAll(): void {
+        const faceUpCards = this.cards.filter((card) => card.faceUp);
+        const handValues = this.calculatePossibleHandValues(faceUpCards);
+        this.recalculateIsBusted(handValues);
+        this.recalculateNonBustedHandValues(handValues);
+        this.recalculateHasReachedDealerMinimum(handValues);
+        this.recalculateHasBlackjack(faceUpCards);
     }
 
-    private calculatePossibleHandValues(): number[] {
+    private calculatePossibleHandValues(faceUpCards: Card[]): number[] {
         let sums = [0];
-        for (const card of this.mycards) {
+        for (const card of faceUpCards) {
             const cardValues = RANK_VALUES.get(card.rank) ?? [];
             let newSums: number[] = [];
 
@@ -193,9 +242,9 @@ export class Player {
         return this.removeDuplicates(sums);
     }
 
-    private recalculateHasBlackjack(): void {
-        if (this.mycards.length === 2 && this.highestNonBustedHandValue === Player.MAX_HAND_VALUE &&
-            (this.mycards[0].rank === Rank.Ace || this.mycards[1].rank === Rank.Ace)) {
+    private recalculateHasBlackjack(faceUpCards: Card[]): void {
+        if (faceUpCards.length === 2 && this.highestNonBustedHandValue === Player.MAX_HAND_VALUE &&
+            (faceUpCards[0].rank === Rank.Ace || faceUpCards[1].rank === Rank.Ace)) {
             this.myHandState = HandState.Blackjack;
         }
     }

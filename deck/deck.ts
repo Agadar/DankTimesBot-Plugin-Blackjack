@@ -13,14 +13,17 @@ export class Deck {
 
     /**
      * Draws a card from this deck, removing it from the card collection.
+     * @param faceUp If the card should be dealt face-up (true) or face-down (false).
      * @return The drawn card.
      * @throws An error if the deck is empty.
      */
-    public drawCard(): Card {
+    public drawCard(faceUp: boolean): Card {
         if (this.cards.length === 0) {
             throw new Error("There are no more cards in the deck!");
         }
-        return this.cards.splice(this.cards.length - 1, 1)[0];
+        const card = this.cards.splice(this.cards.length - 1, 1)[0];
+        card.faceUp = faceUp;
+        return card;
     }
 
     /**

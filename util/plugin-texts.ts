@@ -21,8 +21,7 @@ export class PluginTexts {
         private readonly doubleDownCommand: string) { }
 
     public getNextPlayerTurnMessage(player: Player, isFirstTurn: boolean, canDoubleDown: boolean): string {
-        const playerCardsText = this.cardsAsString(player);
-        let msg = `❕ ${player.formattedName} is up next. They are showing ${playerCardsText}`;
+        let msg = `❕ ${player.formattedName} is up next. They are showing ${player.formattedHand}`;
         if (!player.isDealer) {
             msg += this.getPlayerTurnOptionsText(isFirstTurn, canDoubleDown);
         }
@@ -48,14 +47,7 @@ export class PluginTexts {
         } else {
             text = `${player.formattedName} is showing`;
         }
-        return `${text} ${this.cardsAsString(player)}`;
-    }
-
-    public handValuesAsString(player: Player): string {
-        if (player.handState !== HandState.Busted) {
-            return `   (${player.nonBustedHandValues.map((value) => value.toString()).join(" or ")})`;
-        }
-        return ` ${player.formattedName} busted.`;
+        return `- ${text} ${player.formattedHand}`;
     }
 
     public getPlayerTurnOptionsText(isFirstTurn: boolean, canDoubleDown: boolean): string {
@@ -66,12 +58,6 @@ export class PluginTexts {
             return `\n\nDo you want to /${this.hitCommand}, /${this.standCommand}, /${this.surrenderCommand}, or /${this.doubleDownCommand}?`;
         }
         return `\n\nDo you want to /${this.hitCommand}, /${this.standCommand}, or /${this.surrenderCommand}?`;
-    }
-
-    private cardsAsString(player: Player): string {
-        let cardsString = `${player.cards.map((card) => card.toString()).join(" , ")}.`;
-        cardsString += this.handValuesAsString(player);
-        return cardsString;
     }
 
     private getPlayerResultList(players: Player[], result: string) {

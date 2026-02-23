@@ -26,6 +26,14 @@ export interface IBlackjackGameListener<T> {
     onPlayerTurnTimedOut(source: T, timedOutPlayer: Player, nextPlayer: Player): void;
 
     /**
+     * Called when the dealer has revealed the hole card.
+     * @param source The source of the event.
+     * @param dealer The dealer.
+     * @param holeCard The revealed hole card.
+     */
+    onHoleCardRevealed(source: T, dealer: Player, holeCard: Card): void;
+
+    /**
      * Called when the dealer has drawn a card for themselves.
      * @param source The source of the event.
      * @param dealer The dealer.

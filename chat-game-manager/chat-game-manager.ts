@@ -214,6 +214,13 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
     /**
      * @implements IBlackjackGameListener
      */
+    public onHoleCardRevealed(source: BlackjackGame, dealer: Player, holeCard: Card): void {
+        this.listeners.forEach((listener) => listener.onHoleCardRevealed(this, dealer, holeCard));
+    }
+
+    /**
+     * @implements IBlackjackGameListener
+     */
     public onDealerDrewCard(source: BlackjackGame, dealer: Player, card: Card): void {
         this.listeners.forEach((listener) => listener.onDealerDrewCard(this, dealer, card));
     }
