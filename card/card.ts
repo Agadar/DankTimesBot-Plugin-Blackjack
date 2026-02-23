@@ -19,6 +19,6 @@ export class Card {
      * @return This card as a string.
      */
     public toString(): string {
-        return this.faceUp ? `<b>${this.suit} ${this.rank}</b>` : "a face-down card";
+        return this.faceUp ? `<b>${this.suit} ${this.rank}</b>` : "a hole card";
     }
 }

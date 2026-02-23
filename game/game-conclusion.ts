@@ -8,15 +8,17 @@ export class GameConclusion {
     /**
      * Constructor.
      * @param dealerBusted Whether the dealer went bust.
+     * @param dealerBlackjack Whether the dealer had blackjack.
      * @param bustedPlayers The players that went bust.
      * @param lowerScoreThanDealerPlayers The players that had a lower score than the dealer.
-     * @param sameScoreAsDealerPlayers The players that had the same (non-blackjack) score as the dealer.
+     * @param sameScoreAsDealerPlayers The players that had the same score as the dealer.
      * @param higherScoreThanDealerPlayers The players that had a higher (non-blackjack) score than the dealer.
-     * @param playersWithBlackjack The players that had a blackjack.
+     * @param playersWithBlackjack The players that had a blackjack (while the dealer did not).
      * @param surrenderedPlayers The players that surrendered.
      */
     constructor(
         public readonly dealerBusted: boolean,
+        public readonly dealerBlackjack: boolean,
         public readonly bustedPlayers: Player[],
         public readonly lowerScoreThanDealerPlayers: Player[],
         public readonly sameScoreAsDealerPlayers: Player[],

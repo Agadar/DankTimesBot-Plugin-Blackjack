@@ -20,10 +20,16 @@ export class PluginTexts {
         private readonly surrenderCommand: string,
         private readonly doubleDownCommand: string) { }
 
-    public getNextPlayerTurnMessage(player: Player, isFirstTurn: boolean, canDoubleDown: boolean): string {
-        let msg = `❕ ${player.formattedName} is up next. They are showing ${player.formattedHand}`;
+    public getNextPlayerTurnMessage(player: Player, canDoubleDown: boolean, unfulfilledBlackjackPotential: boolean): string {
+        let msg = "";
+
+        if (unfulfilledBlackjackPotential) {
+            msg += "The dealer does not have blackjack.\n\n";
+        }
+        msg += `❕ ${player.formattedName} is up next. They are showing ${player.formattedHand}`;
+
         if (!player.isDealer) {
-            msg += this.getPlayerTurnOptionsText(isFirstTurn, canDoubleDown);
+            msg += this.getPlayerTurnOptionsText(true, canDoubleDown);
         }
         return msg;
     }

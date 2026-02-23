@@ -13,8 +13,8 @@ import { HitResult } from "./hit-result";
  */
 export class BlackjackGame {
 
-    private static readonly TIME_WAIT_FOR_PLAYERS_MS = 15000;
-    private static readonly TIME_PLAYER_TURN_MS = 15000;
+    private static readonly TIME_WAIT_FOR_PLAYERS_MS = 10000;
+    private static readonly TIME_PLAYER_TURN_MS = 10000;
     private static readonly TIME_BETWEEN_ACTIONS = 3000;
 
     private readonly dealer = new Player();
@@ -167,7 +167,7 @@ export class BlackjackGame {
         return { card: drawnCard, currentPlayer: theCurrentPlayer, nextPlayer: theNextPlayer };
     }
 
-    private dealCards(): void {
+    private async dealCards(): Promise<void> {
         this.gameState = GameState.DEALING_CARDS;
         this.deck = this.deckFactory.createDeck(this.myPlayers.length);
         this.deck.shuffle();
@@ -176,10 +176,27 @@ export class BlackjackGame {
         this.dealer.giveCard(this.deck.drawCard(true));
         this.myPlayers.forEach((player) => player.giveCard(this.deck?.drawCard(true)!));
         this.dealer.giveCard(this.deck.drawCard(false));
+        this.listeners.forEach((listener) => listener.onCardsDealt(this, this.dealer));
 
+        await this.asyncSleep(BlackjackGame.TIME_BETWEEN_ACTIONS);
+        let unfulfilledBlackjackPotential = false;
+
+        if (this.dealer.hasBlackjackPotentialWithHoleCard) {
+            this.listeners.forEach((listener) => listener.onDealerHasBlackjackPotential(this));
+            await this.asyncSleep(BlackjackGame.TIME_BETWEEN_ACTIONS);
+
+            if (this.dealer.hasBlackjackWithHoleCard) {
+                const holeCard = this.dealer.revealHoleCard();
+                this.listeners.forEach((listener) => listener.onHoleCardRevealed(this, this.dealer, holeCard));
+                await this.asyncSleep(BlackjackGame.TIME_BETWEEN_ACTIONS);
+                this.endGame();
+                return; // Dealer has blackjack, so we abruptly end the game.
+            }
+            unfulfilledBlackjackPotential = true;         
+        }
         this.gameState = GameState.PLAYER_TURNS;
         const currentPlayer = this.startNextPlayerTurn();
-        this.listeners.forEach((listener) => listener.onCardsDealt(this, this.dealer, currentPlayer));
+        this.listeners.forEach((listener) => listener.onFirstPlayerTurnStart(this, currentPlayer, unfulfilledBlackjackPotential));
     }
 
     private schedulePlayerTurnTimeout(): void {
@@ -198,7 +215,7 @@ export class BlackjackGame {
 
         if (currentPlayer === this.dealer) {
             this.gameState = GameState.DEALER_TURN;
-            setTimeout(this.revealHoleCard.bind(this), BlackjackGame.TIME_BETWEEN_ACTIONS);
+            setTimeout(this.startDealerTurn.bind(this), BlackjackGame.TIME_BETWEEN_ACTIONS);
 
         } else if (!currentPlayer.mayDrawCard) {
             currentPlayer = this.startNextPlayerTurn();
@@ -209,23 +226,19 @@ export class BlackjackGame {
         return currentPlayer;
     }
 
-    private async revealHoleCard(): Promise<void> {
-        if (this.thereAreNonBustedPlayersWithoutBlackjack()) {
+    private async startDealerTurn(): Promise<void> {
+        if (this.thereAreNonBustedPlayersWithoutBlackjack()) {  // By definition, the dealer cannot have blackjack at this point as this was checked at the start.
             const holeCard = this.dealer.revealHoleCard();
             this.listeners.forEach((listener) => listener.onHoleCardRevealed(this, this.dealer, holeCard));
-            setTimeout(this.executeDealerTurn.bind(this), BlackjackGame.TIME_BETWEEN_ACTIONS);
 
-        } else {
-            this.endGame();
-        }
-    }
-
-    private async executeDealerTurn(): Promise<void> {
-        while (this.dealer.handState === HandState.Normal && !this.dealer.hasReachedDealerMinimum) {
-            const newCard = this.deck?.drawCard(true)!;
-            this.dealer.giveCard(newCard);
-            this.listeners.forEach((listener) => listener.onDealerDrewCard(this, this.dealer, newCard));
             await this.asyncSleep(BlackjackGame.TIME_BETWEEN_ACTIONS);
+
+            while (this.dealer.handState === HandState.Normal && !this.dealer.hasReachedDealerMinimum) {
+                const newCard = this.deck?.drawCard(true)!;
+                this.dealer.giveCard(newCard);
+                this.listeners.forEach((listener) => listener.onDealerDrewCard(this, this.dealer, newCard));
+                await this.asyncSleep(BlackjackGame.TIME_BETWEEN_ACTIONS);
+            }
         }
         this.endGame();
     }
@@ -246,6 +259,7 @@ export class BlackjackGame {
 
         return new GameConclusion(
             this.dealer.handState === HandState.Busted,
+            this.dealer.handState === HandState.Blackjack,
             bustedPlayers,
             lowerScoreThanDealerPlayers,
             sameScoreAsDealerPlayers,
@@ -268,8 +282,8 @@ export class BlackjackGame {
     }
 
     private getPlayersWithSameScoreAsDealer(): Player[] {
-        return this.myPlayers.filter((player) => player.handState === HandState.Normal &&
-            player.highestNonBustedHandValue === this.dealer.highestNonBustedHandValue);
+        return this.myPlayers.filter((player) => (player.handState === HandState.Blackjack && this.dealer.handState === HandState.Blackjack) ||
+            (player.handState === HandState.Normal && player.highestNonBustedHandValue === this.dealer.highestNonBustedHandValue));
     }
 
     private getPlayersWithHigherScoreThanDealer(): Player[] {
@@ -278,6 +292,9 @@ export class BlackjackGame {
     }
 
     private getPlayersWithBlackjack(): Player[] {
+        if (this.dealer.handState === HandState.Blackjack) {
+            return [];  // If dealer and players both have blackjack, then their scores are equal.
+        }
         return this.myPlayers.filter((player) => player.handState === HandState.Blackjack);
     }
 

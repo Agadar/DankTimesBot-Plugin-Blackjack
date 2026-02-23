@@ -200,8 +200,22 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
     /**
      * @implements IBlackjackGameListener
      */
-    public onCardsDealt(source: BlackjackGame, dealer: Player, startingPlayer: Player): void {
-        this.listeners.forEach((listener) => listener.onCardsDealt(this, dealer, startingPlayer));
+    public onCardsDealt(source: BlackjackGame, dealer: Player): void {
+        this.listeners.forEach((listener) => listener.onCardsDealt(this, dealer));
+    }
+
+    /**
+     * @implements IBlackjackGameListener
+     */
+    public onDealerHasBlackjackPotential(source: BlackjackGame): void {
+        this.listeners.forEach((listener) => listener.onDealerHasBlackjackPotential(this));
+    }
+
+    /**
+     * @implements IBlackjackGameListener
+     */
+    public onFirstPlayerTurnStart(source: BlackjackGame, player: Player, unfulfilledBlackjackPotential: boolean): void {
+        this.listeners.forEach((listener) => listener.onFirstPlayerTurnStart(this, player, unfulfilledBlackjackPotential));
     }
 
     /**

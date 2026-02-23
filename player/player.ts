@@ -4,7 +4,7 @@ import { RANK_VALUES } from "../card/rankValues";
 import { HandState } from "./hand-state";
 
 /**
- * A player partaking in a game of Blackjack.
+ * A player (or the dealer) partaking in a game of Blackjack.
  */
 export class Player {
 
@@ -119,7 +119,8 @@ export class Player {
      */
     public get formattedHandValues(): string {
         if (this.handState !== HandState.Busted) {
-            return `   (${this.nonBustedHandValues.map((value) => value.toString()).join(" or ")})`;
+            const handValues = this.nonBustedHandValues.map((value) => value.toString()).join(" or ");
+            return `   (${handValues})`;
         }
         return ` ${this.formattedName} busted.`;
     }
@@ -144,6 +145,24 @@ export class Player {
      */
     public get isFirstTurn(): boolean {
         return this.cards.length === 2;
+    }
+
+    /**
+     * True if this dealer has blackjack potential as revealed by the face-up card's value, else false.
+     */
+    public get hasBlackjackPotentialWithHoleCard(): boolean {
+        const faceUpCard = this.cards.find((c) => c.faceUp)!;
+        const faceUpCardValues = RANK_VALUES.get(faceUpCard.rank)!;
+        const faceUpCardHighestValue = Math.max(...faceUpCardValues);
+        return faceUpCardHighestValue >= 10;
+    }
+
+    /**
+     * True if this dealer has blackjack with the hole card, else false.
+     */
+    public get hasBlackjackWithHoleCard(): boolean {
+        const handValues = this.calculatePossibleHandValues(this.cards);
+        return this.hasBlackjack(this.cards, handValues);
     }
 
     /**
@@ -243,10 +262,14 @@ export class Player {
     }
 
     private recalculateHasBlackjack(faceUpCards: Card[]): void {
-        if (faceUpCards.length === 2 && this.highestNonBustedHandValue === Player.MAX_HAND_VALUE &&
-            (faceUpCards[0].rank === Rank.Ace || faceUpCards[1].rank === Rank.Ace)) {
+        if (this.hasBlackjack(faceUpCards, this.nonBustedHandValues)) {
             this.myHandState = HandState.Blackjack;
         }
+    }
+
+    private hasBlackjack(cardsToCheck: Card[], handValues: number[]): boolean {
+        return cardsToCheck.length === 2 && handValues.findIndex((v) => v === Player.MAX_HAND_VALUE) !== -1  &&
+            (cardsToCheck[0].rank === Rank.Ace || cardsToCheck[1].rank === Rank.Ace)
     }
 
     private recalculateIsBusted(handValues: number[]): void {

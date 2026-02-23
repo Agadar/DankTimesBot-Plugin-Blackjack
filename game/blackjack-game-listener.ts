@@ -12,9 +12,22 @@ export interface IBlackjackGameListener<T> {
      * the wait on players is over.
      * @param source The source of the event.
      * @param dealer The dealer.
-     * @param startingPlayer The player that is up first.
      */
-    onCardsDealt(source: T, dealer: Player, startingPlayer: Player): void;
+    onCardsDealt(source: T, dealer: Player): void;
+
+    /**
+     * Called when the dealer has blackjack potential.
+     * @param source The source of the event.
+     */
+    onDealerHasBlackjackPotential(source: T): void;
+
+    /**
+     * Called when the first player's turn is started, which could be the dealer.
+     * @param source The source of the event.
+     * @param player The first player.
+     * @param unfulfilledBlackjackPotential If the dealer had blackjack potential, but didn't have it after checking the hole card.
+     */
+    onFirstPlayerTurnStart(source: T, player: Player, unfulfilledBlackjackPotential: boolean): void;
 
     /**
      * Called when a player took too long to make a decision, and thus
