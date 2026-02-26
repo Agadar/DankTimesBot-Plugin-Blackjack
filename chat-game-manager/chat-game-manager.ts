@@ -70,7 +70,6 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
             return initializeGameResult;
         }
         createPlayerResult.confiscateBet();
-        this.statistics.updateDealerBalance(bet);
         return initializeGameResult;
     }
 
@@ -95,7 +94,6 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
             return joinGameResult;
         }
         createPlayerResult.confiscateBet();
-        this.statistics.updateDealerBalance(bet);
         return null;
     }
 
@@ -267,11 +265,12 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
         if (bet < 1 || bet % 1 !== 0) {
             return "Your bet must be a whole, positive number!";
         }
-        const rewardFunction = (points: number, reason: string) => {
+        const updateScoreFunction = (points: number, reason: string) => {
             const scoreArgs = new AlterUserScoreArgs(user, points, this.pluginName, reason);
-            this.chat.alterUserScore(scoreArgs);
+            const scoreDelta = this.chat.alterUserScore(scoreArgs);
+            this.statistics.updateDealerBalance(-scoreDelta);
         };
-        return new Player(user, bet, rewardFunction);
+        return new Player(user, bet, updateScoreFunction);
     }
 
     private rewardPlayersOnGameConclusion(conclusion: GameConclusion): void {
@@ -286,9 +285,6 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
     }
 
     private rewardPlayers(players: Player[], multiplier: number, reason: string) {
-        players.forEach((player) => {
-            const awarded = player.rewardPlayer(multiplier, reason);
-            this.statistics.updateDealerBalance(-awarded);
-        });
+        players.forEach((player) => player.rewardPlayer(multiplier, reason));
     }
 }

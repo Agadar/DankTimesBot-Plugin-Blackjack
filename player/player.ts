@@ -51,17 +51,24 @@ export class Player {
     }
 
     /**
-     * True if the player is eligible for a double down and can afford it, else false.
+     * True if its the player's first turn, else false.
      */
-    public get canDoubleDown(): boolean {
+    public get isFirstTurn(): boolean {
+        return this.cards.length === 2;
+    }
+
+    /**
+     * True if the player can afford an extra bet (such as for double down and split), else false.
+     */
+    public get canAffordExtraBet(): boolean {
         return this.user !== null && this.user.score >= this.userBet;
     }
 
     /**
-     * True if the player is eligible for a split and can afford it, else false.
+     * True if the player is eligible for a split, else false.
      */
     public get canSplit(): boolean {
-        return this.canDoubleDown && this.cards[0].rank === this.cards[1].rank;
+        return this.cards[0].rank === this.cards[1].rank;
     }
 
     /**
@@ -149,13 +156,6 @@ export class Player {
     }
 
     /**
-     * True if its the player's first turn, else false.
-     */
-    public get isFirstTurn(): boolean {
-        return this.cards.length === 2;
-    }
-
-    /**
      * True if this dealer has blackjack potential as revealed by the face-up card's value, else false.
      */
     public get hasBlackjackPotentialWithHoleCard(): boolean {
@@ -186,6 +186,16 @@ export class Player {
     public doubleDown(): void {
         this.confiscateBet();
         this.userBet *= 2;
+    }
+
+    /**
+     * Instructs this player they're splitting.
+     * @returns The card that is removed from the player's hand with which to
+     * initialise a new Player instance.
+     */
+    public split(): Card {
+        this.confiscateBet();
+        return this.cards.pop()!;
     }
 
     /**
@@ -276,7 +286,7 @@ export class Player {
     }
 
     private hasBlackjack(cardsToCheck: Card[], handValues: number[]): boolean {
-        return cardsToCheck.length === 2 && handValues.findIndex((v) => v === Player.MAX_HAND_VALUE) !== -1  &&
+        return cardsToCheck.length === 2 && handValues.findIndex((v) => v === Player.MAX_HAND_VALUE) !== -1 &&
             (cardsToCheck[0].rank === Rank.Ace || cardsToCheck[1].rank === Rank.Ace);
     }
 

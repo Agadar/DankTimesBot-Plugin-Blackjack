@@ -155,8 +155,38 @@ export class BlackjackGame {
         if (!theCurrentPlayer.isFirstTurn) {
             return "Doubling down is no longer allowed!";
         }
-        if (!theCurrentPlayer.canDoubleDown) {
+        if (!theCurrentPlayer.canAffordExtraBet) {
             return "You don't have enough points to double down!";
+        }
+        clearTimeout(this.playerTurnTimeoutId);
+
+        theCurrentPlayer.doubleDown();
+        const drawnCard = this.deck!.drawCard(true)!;
+        theCurrentPlayer.giveCard(drawnCard);
+        const theNextPlayer = this.startNextPlayerTurn();
+        return { card: drawnCard, currentPlayer: theCurrentPlayer, nextPlayer: theNextPlayer };
+    }
+
+    /**
+     * If it is the turn of the given user, instructs the dealer they desire to split.
+     * @param user The user desiring to split.
+     * @return Information about the hit results, or an error string if splitting failed and the user need
+     * be informed, or null if splitting failed but no informing is necessary.
+     */
+    public split(user: User): HitResult | string | null {
+        if (this.gameState !== GameState.PLAYER_TURNS) { return null; }
+        const theCurrentPlayer = this.currentPlayer;
+        if (theCurrentPlayer.identifier !== user.id) {
+            return null;
+        }
+        if (!theCurrentPlayer.isFirstTurn) {
+            return "Splitting is no longer allowed!";
+        }
+        if (!theCurrentPlayer.canSplit) {
+            return "Splitting is not possible with your current hand!";
+        }
+        if (!theCurrentPlayer.canAffordExtraBet) {
+            return "You don't have enough points to split!";
         }
         clearTimeout(this.playerTurnTimeoutId);
 
@@ -192,7 +222,7 @@ export class BlackjackGame {
                 this.endGame();
                 return; // Dealer has blackjack, so we abruptly end the game.
             }
-            unfulfilledBlackjackPotential = true;         
+            unfulfilledBlackjackPotential = true;
         }
         this.gameState = GameState.PLAYER_TURNS;
         const currentPlayer = this.startNextPlayerTurn();

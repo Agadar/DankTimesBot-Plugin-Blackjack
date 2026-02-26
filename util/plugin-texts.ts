@@ -64,7 +64,7 @@ export class PluginTexts {
         if (player.isFirstTurn) {
             playerOptions.push(this.surrenderCommand);
 
-            if (player.canDoubleDown) {
+            if (player.canAffordExtraBet) {
                 playerOptions.push(this.doubleDownCommand);
             }
             if (player.canSplit) {

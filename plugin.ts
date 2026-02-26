@@ -45,8 +45,9 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
         const hitCmd = new BotCommand([Plugin.HIT_CMD], "", this.hit.bind(this), false);
         const surrenderCmd = new BotCommand([Plugin.SURRENDER_CMD], "", this.surrender.bind(this), false);
         const doubleDownCmd = new BotCommand([Plugin.DOUBLE_DOWN_CMD], "", this.doubleDown.bind(this), false);
+        const splitCmd = new BotCommand([Plugin.SPLIT_CMD], "", this.split.bind(this), false);
         const statisticsCmd = new BotCommand([Plugin.STATISTICS_CMD], "", this.statistics.bind(this), false);
-        return [infoCmd, betCmd, standCmd, hitCmd, surrenderCmd, doubleDownCmd, statisticsCmd];
+        return [infoCmd, betCmd, standCmd, hitCmd, surrenderCmd, doubleDownCmd, splitCmd, statisticsCmd];
     }
 
     /**
@@ -131,6 +132,7 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
             + `/${Plugin.HIT_CMD} to take another card (when it's your turn)\n`
             + `/${Plugin.SURRENDER_CMD} to surrender (when it's your first turn)\n`
             + `/${Plugin.DOUBLE_DOWN_CMD} to double down (when it's your first turn)\n`
+            + `/${Plugin.SPLIT_CMD} to split (when it's your first turn and your cards have the same value)\n`
             + `/${Plugin.STATISTICS_CMD} to see some statistics of this chat`;
     }
 
@@ -233,6 +235,29 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
         const gameManager = this.getOrCreateGameManager(chat);
         try {
             const info = gameManager.doubleDown(user);
+
+            if (typeof (info) === "string") {
+                return `⚠️ ${info}`;
+            }
+            if (!info) {
+                return "";
+            }
+            let reply = `The dealer deals ${info.currentPlayer.formattedName} ${info.card.toString()}.`;
+            reply += info.currentPlayer.formattedHandValues;
+            const nextPlayerTurnMsg = this.pluginTexts.getNextPlayerTurnMessage(info.nextPlayer, false);
+            reply += `\n\n${nextPlayerTurnMsg}`;
+            return reply;
+
+        } catch (ex: any) {
+            console.error(ex);
+            return `⚠️ ${ex.message}`;
+        }
+    }
+
+    private split(chat: Chat, user: User, msg: TelegramBot.Message, match: string): string {
+        const gameManager = this.getOrCreateGameManager(chat);
+        try {
+            const info = gameManager.split(user);
 
             if (typeof (info) === "string") {
                 return `⚠️ ${info}`;
