@@ -51,10 +51,17 @@ export class Player {
     }
 
     /**
-     * True if the player can afford an additional bet (for a double down or split), else false.
+     * True if the player is eligible for a double down and can afford it, else false.
      */
-    public get canAffordAdditionalBet(): boolean {
+    public get canDoubleDown(): boolean {
         return this.user !== null && this.user.score >= this.userBet;
+    }
+
+    /**
+     * True if the player is eligible for a split and can afford it, else false.
+     */
+    public get canSplit(): boolean {
+        return this.canDoubleDown && this.cards[0].rank === this.cards[1].rank;
     }
 
     /**

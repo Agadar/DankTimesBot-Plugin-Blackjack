@@ -155,7 +155,7 @@ export class BlackjackGame {
         if (!theCurrentPlayer.isFirstTurn) {
             return "Doubling down is no longer allowed!";
         }
-        if (!theCurrentPlayer.canAffordAdditionalBet) {
+        if (!theCurrentPlayer.canDoubleDown) {
             return "You don't have enough points to double down!";
         }
         clearTimeout(this.playerTurnTimeoutId);

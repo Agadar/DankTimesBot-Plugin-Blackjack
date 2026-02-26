@@ -13,14 +13,16 @@ export class PluginTexts {
      * @param standCommand The text for the stand command.
      * @param surrenderCommand The text for the surrender command.
      * @param doubleDownCommand The text for the double down command.
+     * @param splitCommand The text for the split command.
      */
     constructor(
         private readonly hitCommand: string,
         private readonly standCommand: string,
         private readonly surrenderCommand: string,
-        private readonly doubleDownCommand: string) { }
+        private readonly doubleDownCommand: string,
+        private readonly splitCommand: string) { }
 
-    public getNextPlayerTurnMessage(player: Player, canDoubleDown: boolean, unfulfilledBlackjackPotential: boolean): string {
+    public getNextPlayerTurnMessage(player: Player, unfulfilledBlackjackPotential: boolean): string {
         let msg = "";
 
         if (unfulfilledBlackjackPotential) {
@@ -29,7 +31,7 @@ export class PluginTexts {
         msg += `❕ ${player.formattedName} is up next. They are showing ${player.formattedHand}`;
 
         if (!player.isDealer) {
-            msg += this.getPlayerTurnOptionsText(true, canDoubleDown);
+            msg += this.getPlayerTurnOptionsText(player);
         }
         return msg;
     }
@@ -56,14 +58,27 @@ export class PluginTexts {
         return `- ${text} ${player.formattedHand}`;
     }
 
-    public getPlayerTurnOptionsText(isFirstTurn: boolean, canDoubleDown: boolean): string {
-        if (!isFirstTurn) {
-            return `\n\nDo you want to /${this.hitCommand}, or /${this.standCommand}?`;
+    public getPlayerTurnOptionsText(player: Player): string {
+        const playerOptions = [this.hitCommand, this.standCommand];
+
+        if (player.isFirstTurn) {
+            playerOptions.push(this.surrenderCommand);
+
+            if (player.canDoubleDown) {
+                playerOptions.push(this.doubleDownCommand);
+            }
+            if (player.canSplit) {
+                playerOptions.push(this.splitCommand);
+            }
         }
-        if (canDoubleDown) {
-            return `\n\nDo you want to /${this.hitCommand}, /${this.standCommand}, /${this.surrenderCommand}, or /${this.doubleDownCommand}?`;
+        let text = `\n\nDo you want to /${playerOptions[0]}`;
+        let i = 1;
+
+        for (; i < playerOptions.length - 1; i++) {
+            text += `, /${playerOptions[i]}`;
         }
-        return `\n\nDo you want to /${this.hitCommand}, /${this.standCommand}, or /${this.surrenderCommand}?`;
+        text += `, or /${playerOptions[i]}?`;
+        return text;
     }
 
     private getPlayerResultList(players: Player[], result: string) {
