@@ -74,8 +74,7 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
             this.sendMessage(source.chatId, message);
 
         } else {
-            const user = this.getChat(source.chatId)!.getOrCreateUser(player.identifier);
-            const message = this.pluginTexts.getNextPlayerTurnMessage(player, user.score >= player.bet, unfulfilledBlackjackPotential);
+            const message = this.pluginTexts.getNextPlayerTurnMessage(player, player.canAffordAdditionalBet, unfulfilledBlackjackPotential);
             this.sendMessage(source.chatId, message);
         }
     }
@@ -84,8 +83,7 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
      * @implements IBlackjackGameListener
      */
     public onPlayerTurnTimedOut(source: ChatGameManager, timedOutPlayer: Player, nextPlayer: Player) {
-        const user = this.getChat(source.chatId)!.getOrCreateUser(nextPlayer.identifier);
-        const playerTurnMsg = this.pluginTexts.getNextPlayerTurnMessage(nextPlayer, user.score >= nextPlayer.bet, false);
+        const playerTurnMsg = this.pluginTexts.getNextPlayerTurnMessage(nextPlayer, nextPlayer.canAffordAdditionalBet, false);
         const message = `${timedOutPlayer.formattedName} took too long to decide.\n\n${playerTurnMsg}`;
         this.sendMessage(source.chatId, message);
     }
@@ -177,8 +175,7 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
             const nextPlayer = gameManager.stand(user.id);
 
             if (nextPlayer) {
-                const nextUser = chat.getOrCreateUser(nextPlayer.identifier);
-                return this.pluginTexts.getNextPlayerTurnMessage(nextPlayer, nextUser.score >= nextPlayer.bet, false);
+                return this.pluginTexts.getNextPlayerTurnMessage(nextPlayer, nextPlayer.canAffordAdditionalBet, false);
             }
             return "";
         } catch (ex: any) {
@@ -196,8 +193,7 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
                 return `⚠️ ${surrenderResult}`;
             }
             if (surrenderResult) {
-                const nextUser = chat.getOrCreateUser(surrenderResult.identifier);
-                return this.pluginTexts.getNextPlayerTurnMessage(surrenderResult, nextUser.score >= surrenderResult.bet, false);
+                return this.pluginTexts.getNextPlayerTurnMessage(surrenderResult, surrenderResult.canAffordAdditionalBet, false);
             }
             return "";
 
@@ -219,8 +215,7 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
             reply += info.currentPlayer.formattedHandValues;
 
             if (info.currentPlayer.handState === HandState.Busted) {
-                const nextUser = chat.getOrCreateUser(info.nextPlayer.identifier);
-                const nextPlayerTurnMsg = this.pluginTexts.getNextPlayerTurnMessage(info.nextPlayer, nextUser.score >= info.nextPlayer.bet, false);
+                const nextPlayerTurnMsg = this.pluginTexts.getNextPlayerTurnMessage(info.nextPlayer, info.nextPlayer.canAffordAdditionalBet, false);
                 reply += `\n\n${nextPlayerTurnMsg}`;
             } else {
                 reply += this.pluginTexts.getPlayerTurnOptionsText(false, false);
@@ -246,8 +241,7 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
             }
             let reply = `The dealer deals ${info.currentPlayer.formattedName} ${info.card.toString()}.`;
             reply += info.currentPlayer.formattedHandValues;
-            const nextUser = chat.getOrCreateUser(info.nextPlayer.identifier);
-            const nextPlayerTurnMsg = this.pluginTexts.getNextPlayerTurnMessage(info.nextPlayer, nextUser.score >= info.nextPlayer.bet, false);
+            const nextPlayerTurnMsg = this.pluginTexts.getNextPlayerTurnMessage(info.nextPlayer, info.nextPlayer.canAffordAdditionalBet, false);
             reply += `\n\n${nextPlayerTurnMsg}`;
             return reply;
 

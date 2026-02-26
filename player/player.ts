@@ -1,3 +1,4 @@
+import { User } from "../../../src/chat/user/user";
 import { Card } from "../card/card";
 import { Rank } from "../card/rank";
 import { RANK_VALUES } from "../card/rankValues";
@@ -10,10 +11,7 @@ export class Player {
 
     private static readonly MAX_HAND_VALUE = 21;
     private static readonly DEALER_MIN_GOAL = 17;
-
-    private static readonly DEALER_IDENTIFIER = -1;
     private static readonly DEALER_NAME = "The dealer";
-
     private static readonly BET_CONFISCATION_REASON = "bet.confiscation";
 
     private readonly cards = new Array<Card>();
@@ -24,11 +22,8 @@ export class Player {
 
     /**
      * Initializes a new player.
-     * @param identifier A unique identifier for this player. If -1, this player
-     * is assumed to be the dealer.
-     * @param name The name of this player. If not supplied, falls back to a default
-     * dealer name.
-     * @param myBet The original bet of the player. Does not have to be supplied if this
+     * @param user The chat user, or null if this player is the dealer.
+     * @param userBet The original bet of the player. Does not have to be supplied if this
      * player is the dealer (as it will be ignored anyway).
      * @param updateScoreFunction The function to use for updating the score, which is
      * used for subtracting the original bet from the player as well as for rewarding them
@@ -37,10 +32,16 @@ export class Player {
      * @throws An error if the bet is incorrect.
      */
     constructor(
-        public readonly identifier = Player.DEALER_IDENTIFIER,
-        private readonly name = Player.DEALER_NAME,
-        private myBet = 0,
+        private readonly user: User | null = null,
+        private userBet = 0,
         private readonly updateScoreFunction?: ((points: number, reason: string) => void)) { }
+
+    /**
+     * This player's underlying chat user id, or -1 if this player is the dealer.
+     */
+    public get identifier(): number {
+        return this.user === null ? -1 : this.user.id;
+    }
 
     /**
      * The player's hand state.
@@ -50,10 +51,10 @@ export class Player {
     }
 
     /**
-     * The player's bet.
+     * True if the player can afford an additional bet (for a double down or split), else false.
      */
-    public get bet(): number {
-        return this.myBet;
+    public get canAffordAdditionalBet(): boolean {
+        return this.user !== null && this.user.score >= this.userBet;
     }
 
     /**
@@ -86,10 +87,10 @@ export class Player {
      * Gets this player's formatted name.
      */
     public get formattedName(): string {
-        if (!this.isDealer) {
-            return `@${this.name}`;
+        if (this.user === null) {
+            return Player.DEALER_NAME;
         }
-        return this.name;
+        return `@${this.user.name}`;
     }
 
     /**
@@ -129,7 +130,7 @@ export class Player {
      * Gets whether this player is the dealer.
      */
     public get isDealer(): boolean {
-        return this.identifier === Player.DEALER_IDENTIFIER;
+        return this.user === null;
     }
 
     /**
@@ -177,7 +178,7 @@ export class Player {
      */
     public doubleDown(): void {
         this.confiscateBet();
-        this.myBet *= 2;
+        this.userBet *= 2;
     }
 
     /**
@@ -214,7 +215,7 @@ export class Player {
      */
     public confiscateBet(): void {
         if (!this.isDealer && this.updateScoreFunction) {
-            this.updateScoreFunction(-this.myBet, Player.BET_CONFISCATION_REASON);
+            this.updateScoreFunction(-this.userBet, Player.BET_CONFISCATION_REASON);
         }
     }
 
@@ -227,7 +228,7 @@ export class Player {
     public rewardPlayer(multiplier: number, reason: string): number {
         let reward = 0;
         if (!this.isDealer && this.updateScoreFunction) {
-            reward = Math.floor(this.myBet * multiplier);
+            reward = Math.floor(this.userBet * multiplier);
             this.updateScoreFunction(reward, reason);
         }
         return reward;
@@ -269,7 +270,7 @@ export class Player {
 
     private hasBlackjack(cardsToCheck: Card[], handValues: number[]): boolean {
         return cardsToCheck.length === 2 && handValues.findIndex((v) => v === Player.MAX_HAND_VALUE) !== -1  &&
-            (cardsToCheck[0].rank === Rank.Ace || cardsToCheck[1].rank === Rank.Ace)
+            (cardsToCheck[0].rank === Rank.Ace || cardsToCheck[1].rank === Rank.Ace);
     }
 
     private recalculateIsBusted(handValues: number[]): void {

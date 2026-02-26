@@ -271,7 +271,7 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
             const scoreArgs = new AlterUserScoreArgs(user, points, this.pluginName, reason);
             this.chat.alterUserScore(scoreArgs);
         };
-        return new Player(user.id, user.name, bet, rewardFunction);
+        return new Player(user, bet, rewardFunction);
     }
 
     private rewardPlayersOnGameConclusion(conclusion: GameConclusion): void {
