@@ -221,7 +221,7 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
                 const nextPlayerTurnMsg = this.pluginTexts.getNextPlayerTurnMessage(info.nextPlayer, false);
                 reply += `\n\n${nextPlayerTurnMsg}`;
             } else {
-                reply += this.pluginTexts.getPlayerTurnOptionsText(info.nextPlayer);
+                reply += this.pluginTexts.getPlayerTurnOptionsText(info.currentPlayer);
             }
             return reply;
 
@@ -265,10 +265,9 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
             if (!info) {
                 return "";
             }
-            let reply = `The dealer deals ${info.currentPlayer.formattedName} ${info.card.toString()}.`;
+            let reply = `${info.currentPlayer.formattedName} splits their hand! The dealer deals ${info.currentPlayer.formattedName} ${info.card.toString()}.`;
             reply += info.currentPlayer.formattedHandValues;
-            const nextPlayerTurnMsg = this.pluginTexts.getNextPlayerTurnMessage(info.nextPlayer, false);
-            reply += `\n\n${nextPlayerTurnMsg}`;
+            reply += this.pluginTexts.getPlayerTurnOptionsText(info.currentPlayer);
             return reply;
 
         } catch (ex: any) {

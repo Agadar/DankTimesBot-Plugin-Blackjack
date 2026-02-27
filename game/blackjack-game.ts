@@ -121,23 +121,23 @@ export class BlackjackGame {
      */
     public hit(identifier: number): HitResult | null {
         if (this.gameState !== GameState.PLAYER_TURNS) { return null; }
-        const theCurrentPlayer = this.currentPlayer;
-        if (theCurrentPlayer.identifier !== identifier) {
+        if (this.currentPlayer.identifier !== identifier) {
             return null;
         }
         clearTimeout(this.playerTurnTimeoutId);
 
+        const currentPlayer = this.currentPlayer;
         const drawnCard = this.deck?.drawCard(true)!;
-        theCurrentPlayer.giveCard(drawnCard);
+        currentPlayer.giveCard(drawnCard);
         let theNextPlayer: Player;
 
-        if (theCurrentPlayer.handState === HandState.Busted) {
+        if (currentPlayer.handState === HandState.Busted) {
             theNextPlayer = this.startNextPlayerTurn();
         } else {
             this.schedulePlayerTurnTimeout();
-            theNextPlayer = theCurrentPlayer;
+            theNextPlayer = currentPlayer;
         }
-        return { card: drawnCard, currentPlayer: theCurrentPlayer, nextPlayer: theNextPlayer };
+        return { card: drawnCard, currentPlayer: currentPlayer, nextPlayer: theNextPlayer };
     }
 
     /**
@@ -175,26 +175,27 @@ export class BlackjackGame {
      */
     public split(user: User): HitResult | string | null {
         if (this.gameState !== GameState.PLAYER_TURNS) { return null; }
-        const theCurrentPlayer = this.currentPlayer;
-        if (theCurrentPlayer.identifier !== user.id) {
+        if (this.currentPlayer.identifier !== user.id) {
             return null;
         }
-        if (!theCurrentPlayer.isFirstTurn) {
+        if (!this.currentPlayer.isFirstTurn) {
             return "Splitting is no longer allowed!";
         }
-        if (!theCurrentPlayer.canSplit) {
+        if (!this.currentPlayer.canSplit) {
             return "Splitting is not possible with your current hand!";
         }
-        if (!theCurrentPlayer.canAffordExtraBet) {
+        if (!this.currentPlayer.canAffordExtraBet) {
             return "You don't have enough points to split!";
         }
         clearTimeout(this.playerTurnTimeoutId);
 
-        theCurrentPlayer.doubleDown();
-        const drawnCard = this.deck!.drawCard(true)!;
-        theCurrentPlayer.giveCard(drawnCard);
-        const theNextPlayer = this.startNextPlayerTurn();
-        return { card: drawnCard, currentPlayer: theCurrentPlayer, nextPlayer: theNextPlayer };
+        const secondHand = this.currentPlayer.split();
+        this.players.splice(this.playerTurnIndex + 1, 0, secondHand);
+        
+        const drawnCard = this.deck?.drawCard(true)!;
+        this.currentPlayer.giveCard(drawnCard);
+        this.schedulePlayerTurnTimeout();
+        return { card: drawnCard, currentPlayer: this.currentPlayer, nextPlayer: this.currentPlayer };
     }
 
     private async dealCards(): Promise<void> {

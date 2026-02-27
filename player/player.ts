@@ -54,7 +54,7 @@ export class Player {
      * True if its the player's first turn, else false.
      */
     public get isFirstTurn(): boolean {
-        return this.cards.length === 2;
+        return this.cards.length <= 2;
     }
 
     /**
@@ -68,7 +68,7 @@ export class Player {
      * True if the player is eligible for a split, else false.
      */
     public get canSplit(): boolean {
-        return this.cards[0].rank === this.cards[1].rank;
+        return this.cards.length === 2 && this.cards[0].rank === this.cards[1].rank;
     }
 
     /**
@@ -190,12 +190,16 @@ export class Player {
 
     /**
      * Instructs this player they're splitting.
-     * @returns The card that is removed from the player's hand with which to
-     * initialise a new Player instance.
+     * @returns A new player, representing the new second hand.
      */
-    public split(): Card {
+    public split(): Player {
         this.confiscateBet();
-        return this.cards.pop()!;
+        const cardForSecondHand = this.cards.pop()!;
+        this.recalculateAll();
+        
+        const secondHand = new Player(this.user, this.userBet, this.updateScoreFunction);
+        secondHand.giveCard(cardForSecondHand);
+        return secondHand;
     }
 
     /**
@@ -227,8 +231,7 @@ export class Player {
     }
 
     /**
-     * Confiscates the bet from the player. Assumed to be done sometime
-     * before the start of the game of blackjack.
+     * Confiscates the bet from the player.
      */
     public confiscateBet(): void {
         if (!this.isDealer && this.updateScoreFunction) {

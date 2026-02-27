@@ -148,6 +148,19 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
     }
 
     /**
+     * If it is the turn of the given user, instructs the dealer they desire to split.
+     * @param user The user desiring to split.
+     * @return Information about the hit results, or an error string if splitting failed and the user need
+     * be informed, or null if splitting failed but no informing is necessary.
+     */
+    public split(user: User): HitResult | string | null {
+        if (this.gameIsRunning) {
+            return (this.game as BlackjackGame).split(user);
+        }
+        return null;
+    }
+
+    /**
      * The chat id for which this manager manages blackjack games.
      */
     public get chatId(): number {
