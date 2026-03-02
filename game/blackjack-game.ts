@@ -18,12 +18,12 @@ export class BlackjackGame {
     private static readonly TIME_BETWEEN_ACTIONS = 3000;
 
     private readonly dealer = new Player();
-    private readonly myPlayers = new Array<Player>();
+    private readonly players = new Array<Player>();
     private readonly listeners = new Array<IBlackjackGameListener<BlackjackGame>>();
 
     private gameState = GameState.INITIALIZING;
     private playerTurnIndex = -1;
-    private playerTurnTimeoutId: NodeJS.Timeout | undefined;
+    private playerTurnTimeoutId: NodeJS.Timeout | undefined;    // 'Cannot find namespace' error in IDE, but seems to work.
     private deck: Deck | undefined;
 
     constructor(private readonly deckFactory: DeckFactory) { }
@@ -36,13 +36,6 @@ export class BlackjackGame {
         if (this.listeners.indexOf(subscriber) === -1) {
             this.listeners.push(subscriber);
         }
-    }
-
-    /**
-     * This game's players.
-     */
-    public get players(): Player[] {
-        return this.myPlayers.slice(0, this.myPlayers.length);
     }
 
     /**
@@ -77,7 +70,7 @@ export class BlackjackGame {
         if (!this.isJoinable) {
             return "It's no longer possible to join the game!";
         }
-        this.myPlayers.push(player);
+        this.players.push(player);
         return null;
     }
 
@@ -191,7 +184,7 @@ export class BlackjackGame {
 
         const secondHand = this.currentPlayer.split();
         this.players.splice(this.playerTurnIndex + 1, 0, secondHand);
-        
+
         const drawnCard = this.deck?.drawCard(true)!;
         this.currentPlayer.giveCard(drawnCard);
         this.schedulePlayerTurnTimeout();
@@ -200,12 +193,12 @@ export class BlackjackGame {
 
     private async dealCards(): Promise<void> {
         this.gameState = GameState.DEALING_CARDS;
-        this.deck = this.deckFactory.createDeck(this.myPlayers.length);
+        this.deck = this.deckFactory.createDeck(this.players.length);
         this.deck.shuffle();
 
-        this.myPlayers.forEach((player) => player.giveCard(this.deck!.drawCard(true)));
+        this.players.forEach((player) => player.giveCard(this.deck!.drawCard(true)));
         this.dealer.giveCard(this.deck.drawCard(true));
-        this.myPlayers.forEach((player) => player.giveCard(this.deck!.drawCard(true)!));
+        this.players.forEach((player) => player.giveCard(this.deck!.drawCard(true)));
         this.dealer.giveCard(this.deck.drawCard(false));
         this.listeners.forEach((listener) => listener.onCardsDealt(this, this.dealer));
 
@@ -301,25 +294,25 @@ export class BlackjackGame {
     }
 
     private thereAreNonBustedPlayersWithoutBlackjack(): boolean {
-        return this.myPlayers.findIndex((player) => player.handState === HandState.Normal) !== -1;
+        return this.players.findIndex((player) => player.handState === HandState.Normal) !== -1;
     }
 
     private getBustedPlayers(): Player[] {
-        return this.myPlayers.filter((player) => player.handState === HandState.Busted);
+        return this.players.filter((player) => player.handState === HandState.Busted);
     }
 
     private getPlayersWithLowerScoreThanDealer(): Player[] {
-        return this.myPlayers.filter((player) => player.handState === HandState.Normal &&
+        return this.players.filter((player) => player.handState === HandState.Normal &&
             player.highestNonBustedHandValue < this.dealer.highestNonBustedHandValue);
     }
 
     private getPlayersWithSameScoreAsDealer(): Player[] {
-        return this.myPlayers.filter((player) => (player.handState === HandState.Blackjack && this.dealer.handState === HandState.Blackjack) ||
+        return this.players.filter((player) => (player.handState === HandState.Blackjack && this.dealer.handState === HandState.Blackjack) ||
             (player.handState === HandState.Normal && player.highestNonBustedHandValue === this.dealer.highestNonBustedHandValue));
     }
 
     private getPlayersWithHigherScoreThanDealer(): Player[] {
-        return this.myPlayers.filter((player) => player.handState === HandState.Normal &&
+        return this.players.filter((player) => player.handState === HandState.Normal &&
             player.highestNonBustedHandValue > this.dealer.highestNonBustedHandValue);
     }
 
@@ -327,18 +320,18 @@ export class BlackjackGame {
         if (this.dealer.handState === HandState.Blackjack) {
             return [];  // If dealer and players both have blackjack, then their scores are equal.
         }
-        return this.myPlayers.filter((player) => player.handState === HandState.Blackjack);
+        return this.players.filter((player) => player.handState === HandState.Blackjack);
     }
 
     private getSurrenderedPlayers(): Player[] {
-        return this.myPlayers.filter((player) => player.handState === HandState.Surrendered);
+        return this.players.filter((player) => player.handState === HandState.Surrendered);
     }
 
     private get currentPlayer(): Player {
-        if (this.playerTurnIndex >= this.myPlayers.length) {
+        if (this.playerTurnIndex >= this.players.length) {
             return this.dealer;
         }
-        return this.myPlayers[this.playerTurnIndex];
+        return this.players[this.playerTurnIndex];
     }
 
     private asyncSleep(milliseconds: number): Promise<void> {
