@@ -15,10 +15,11 @@ export class BlackjackGame {
 
     private static readonly TIME_WAIT_FOR_PLAYERS_MS = 10000;
     private static readonly TIME_PLAYER_TURN_MS = 10000;
-    private static readonly TIME_BETWEEN_ACTIONS = 3000;
+    private static readonly TIME_BETWEEN_ACTIONS = 2000;
+
+    public readonly players = new Array<Player>();
 
     private readonly dealer = new Player();
-    private readonly players = new Array<Player>();
     private readonly listeners = new Array<IBlackjackGameListener<BlackjackGame>>();
 
     private gameState = GameState.INITIALIZING;
@@ -77,12 +78,16 @@ export class BlackjackGame {
     /**
      * If it is the turn of the player that has the supplied identifier, instructs the dealer they desire to stand.
      * @param identifier The identifier of the player desiring to stand.
-     * @return The player that is next, which can also be the dealer, or null if the current player cannot stand.
+     * @return The player that is next, which can also be the dealer, or an error text if an error occured that
+     * requires informing the users, or null if an error occured that does not require that.
      */
-    public stand(identifier: number): Player | null {
+    public stand(identifier: number): Player | string | null {
         if (this.gameState !== GameState.PLAYER_TURNS) { return null; }
         const currentPlayer = this.currentPlayer;
         if (currentPlayer.identifier !== identifier) { return null; }
+        if (currentPlayer.requiresCard) {
+            return "Wait until the dealer has dealt you your second card!";
+        }
         clearTimeout(this.playerTurnTimeoutId);
         return this.startNextPlayerTurn();
     }
@@ -97,7 +102,9 @@ export class BlackjackGame {
         if (this.gameState !== GameState.PLAYER_TURNS) { return null; }
         const currentPlayer = this.currentPlayer;
         if (currentPlayer.identifier !== identifier) { return null; }
-
+        if (currentPlayer.requiresCard) {
+            return "Wait until the dealer has dealt you your second card!";
+        }
         if (currentPlayer.isFirstTurn) {
             currentPlayer.setSurrendered();
             clearTimeout(this.playerTurnTimeoutId);
@@ -110,12 +117,16 @@ export class BlackjackGame {
     /**
      * If it is the turn of the player that has the supplied identifier, instructs the dealer they desire to hit.
      * @param identifier The identifier of the player desiring to hit.
-     * @return Information about the hit results. or null if hitting failed.
+     * @return Information about the hit results, or an error string if hitting failed and the user need
+     * be informed, or null if hitting failed but no informing is necessary.
      */
-    public hit(identifier: number): HitResult | null {
+    public hit(identifier: number): HitResult | string | null {
         if (this.gameState !== GameState.PLAYER_TURNS) { return null; }
         if (this.currentPlayer.identifier !== identifier) {
             return null;
+        }
+        if (this.currentPlayer.requiresCard) {
+            return "Wait until the dealer has dealt you your second card!";
         }
         clearTimeout(this.playerTurnTimeoutId);
 
@@ -145,6 +156,9 @@ export class BlackjackGame {
         if (theCurrentPlayer.identifier !== user.id) {
             return null;
         }
+        if (theCurrentPlayer.requiresCard) {
+            return "Wait until the dealer has dealt you your second card!";
+        }
         if (!theCurrentPlayer.isFirstTurn) {
             return "Doubling down is no longer allowed!";
         }
@@ -171,6 +185,9 @@ export class BlackjackGame {
         if (this.currentPlayer.identifier !== user.id) {
             return null;
         }
+        if (this.currentPlayer.requiresCard) {
+            return "Wait until the dealer has dealt you your second card!";
+        }
         if (!this.currentPlayer.isFirstTurn) {
             return "Splitting is no longer allowed!";
         }
@@ -193,13 +210,13 @@ export class BlackjackGame {
 
     private async dealCards(): Promise<void> {
         this.gameState = GameState.DEALING_CARDS;
-        this.deck = this.deckFactory.createDeck(this.players.length);
+        this.deck = this.deckFactory.createDeck(this.players.length)!;
         this.deck.shuffle();
 
         this.players.forEach((player) => player.giveCard(this.deck!.drawCard(true)));
-        this.dealer.giveCard(this.deck.drawCard(true));
+        this.dealer.giveCard(this.deck!.drawCard(true));
         this.players.forEach((player) => player.giveCard(this.deck!.drawCard(true)));
-        this.dealer.giveCard(this.deck.drawCard(false));
+        this.dealer.giveCard(this.deck!.drawCard(false));
         this.listeners.forEach((listener) => listener.onCardsDealt(this, this.dealer));
 
         await this.asyncSleep(BlackjackGame.TIME_BETWEEN_ACTIONS);
@@ -244,6 +261,9 @@ export class BlackjackGame {
         } else if (!currentPlayer.mayDrawCard) {
             currentPlayer = this.startNextPlayerTurn();
 
+        } else if (currentPlayer.requiresCard) {
+            setTimeout(this.scheduleAsynchronousCardDeal.bind(this), BlackjackGame.TIME_BETWEEN_ACTIONS);
+
         } else {
             this.schedulePlayerTurnTimeout();
         }
@@ -266,6 +286,13 @@ export class BlackjackGame {
             }
         }
         this.endGame();
+    }
+
+    private async scheduleAsynchronousCardDeal(): Promise<void> {
+        const card = this.deck!.drawCard(true);
+        this.currentPlayer.giveCard(card);
+        this.listeners.forEach((listener) => listener.onAsynchronousCardDealt(this, this.currentPlayer, card));
+        this.schedulePlayerTurnTimeout();
     }
 
     private endGame(): void {

@@ -156,6 +156,14 @@ export class Player {
     }
 
     /**
+     * True if the player requires an extra card, else false. Relevant when this player is the result of a split, which means
+     * they only have 1 card and so require an additional card before their turn may officially begin.
+     */
+    public get requiresCard(): boolean {
+        return this.cards.length < 2;
+    }
+
+    /**
      * True if this dealer has blackjack potential as revealed by the face-up card's value, else false.
      */
     public get hasBlackjackPotentialWithHoleCard(): boolean {

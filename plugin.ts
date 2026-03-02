@@ -93,6 +93,16 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
     /**
      * @implements IBlackjackGameListener
      */
+    public onAsynchronousCardDealt(source: ChatGameManager, player: Player, card: Card): void {
+        let message = `The dealer deals ${player.formattedName} their second card: ${card.toString()}.`;
+        message += player.formattedHandValues;
+        message += this.pluginTexts.getPlayerTurnOptionsText(player);
+        this.sendMessage(source.chatId, message);
+    }
+
+    /**
+     * @implements IBlackjackGameListener
+     */
     public onHoleCardRevealed(source: ChatGameManager, dealer: Player, holeCard: Card): void {
         const message = `The dealer reveals the hole card: ${holeCard.toString()}.${dealer.formattedHandValues}`;
         this.sendMessage(source.chatId, message);
@@ -177,6 +187,9 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
         try {
             const nextPlayer = gameManager.stand(user.id);
 
+            if (typeof (nextPlayer) === "string") {
+                return `⚠️ ${nextPlayer}`;
+            }
             if (nextPlayer) {
                 return this.pluginTexts.getNextPlayerTurnMessage(nextPlayer, false);
             }
@@ -211,6 +224,9 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
         try {
             const info = gameManager.hit(user.id);
 
+            if (typeof (info) === "string") {
+                return `⚠️ ${info}`;
+            }
             if (!info) {
                 return "";
             }
@@ -265,7 +281,7 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
             if (!info) {
                 return "";
             }
-            let reply = `${info.currentPlayer.formattedName} splits their hand! The dealer deals ${info.currentPlayer.formattedName} ${info.card.toString()}.`;
+            let reply = `${info.currentPlayer.formattedName} splits their hand!\n\nThe dealer deals ${info.currentPlayer.formattedName} ${info.card.toString()}.`;
             reply += info.currentPlayer.formattedHandValues;
             reply += this.pluginTexts.getPlayerTurnOptionsText(info.currentPlayer);
             return reply;

@@ -100,9 +100,10 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
     /**
      * If it is the user's turn, instructs the dealer they desire to stand.
      * @param userId The id of the user desiring to stand.
-     * @return The player that is next, which can also be the dealer.
+     * @return The player that is next, which can also be the dealer, or an error text if an error occured that
+     * requires informing the users, or null if an error occured that does not require that.
      */
-    public stand(userId: number): Player | null {
+    public stand(userId: number): Player | string | null {
         if (this.gameIsRunning) {
             return (this.game as BlackjackGame).stand(userId);
         }
@@ -112,8 +113,8 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
     /**
      * If it is the user's turn, instructs the dealer they desire to surrender.
      * @param userId The id of the user desiring to surrender.
-     * @return The player that is next, which can also be the dealer, or an error string
-     * if surrendering is not possible.
+     * @return The player that is next, which can also be the dealer, or an error text if an error occured that
+     * requires informing the users, or null if an error occured that does not require that.
      */
     public surrender(userId: number): Player | string | null {
         if (this.gameIsRunning) {
@@ -125,9 +126,10 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
     /**
      * Instructs the dealer the user desires to hit.
      * @param userId The id of the user desiring to hit.
-     * @return Information about the hit results. or null if hitting failed.
+     * @return Information about the hit results, or an error string if hitting failed and the user need
+     * be informed, or null if hitting failed but no informing is necessary.
      */
-    public hit(userId: number): HitResult | null {
+    public hit(userId: number): HitResult | string | null {
         if (this.gameIsRunning) {
             return (this.game as BlackjackGame).hit(userId);
         }
@@ -234,6 +236,13 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
      */
     public onPlayerTurnTimedOut(source: BlackjackGame, timedOutPlayer: Player, nextPlayer: Player) {
         this.listeners.forEach((listener) => listener.onPlayerTurnTimedOut(this, timedOutPlayer, nextPlayer));
+    }
+
+    /**
+     * @implements IBlackjackGameListener
+     */
+    public onAsynchronousCardDealt(source: BlackjackGame, player: Player, card: Card): void {
+        this.listeners.forEach((listener) => listener.onAsynchronousCardDealt(this, player, card));
     }
 
     /**

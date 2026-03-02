@@ -39,6 +39,15 @@ export interface IBlackjackGameListener<T> {
     onPlayerTurnTimedOut(source: T, timedOutPlayer: Player, nextPlayer: Player): void;
 
     /**
+     * Called when a player is asynchronously dealt a card. This happens when the player resulted from a split, and they now
+     * receive their second card so they can properly start their turn.
+     * @param source The source of the event.
+     * @param player The player that is dealt a card.
+     * @param card The dealt card.
+     */
+    onAsynchronousCardDealt(source: T, player: Player, card: Card): void;
+
+    /**
      * Called when the dealer has revealed the hole card.
      * @param source The source of the event.
      * @param dealer The dealer.

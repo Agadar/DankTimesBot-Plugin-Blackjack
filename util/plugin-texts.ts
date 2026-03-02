@@ -30,7 +30,7 @@ export class PluginTexts {
         }
         msg += `❕ ${player.formattedName} is up next. They are showing ${player.formattedHand}`;
 
-        if (!player.isDealer) {
+        if (!player.isDealer && !player.requiresCard) {
             msg += this.getPlayerTurnOptionsText(player);
         }
         return msg;
