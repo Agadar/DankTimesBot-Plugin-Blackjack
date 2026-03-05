@@ -292,7 +292,7 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
             const scoreDelta = this.chat.alterUserScore(scoreArgs);
             this.statistics.updateDealerBalance(-scoreDelta);
         };
-        return new Player(user, bet, updateScoreFunction);
+        return new Player(user, bet, updateScoreFunction, false);
     }
 
     private rewardPlayersOnGameConclusion(conclusion: GameConclusion): void {

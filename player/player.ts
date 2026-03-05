@@ -29,12 +29,16 @@ export class Player {
      * used for subtracting the original bet from the player as well as for rewarding them
      * if they won a round. Does not have to be supplied if this player is the dealer
      * (as it will be ignored anyway).
+     * @param fromSplit True if this player resulted dynamically from a split by a user,
+     * else false. Does not have to be supplied if this player is the dealer (as it will be
+     * ignored anyway).
      * @throws An error if the bet is incorrect.
      */
     constructor(
         private readonly user: User | null = null,
         private userBet = 0,
-        private readonly updateScoreFunction?: ((points: number, reason: string) => void)) { }
+        private readonly updateScoreFunction?: ((points: number, reason: string) => void),
+        private fromSplit = false) { }
 
     /**
      * This player's underlying chat user id, or -1 if this player is the dealer.
@@ -203,9 +207,10 @@ export class Player {
     public split(): Player {
         this.confiscateBet();
         const cardForSecondHand = this.cards.pop()!;
+        this.fromSplit = true;
         this.recalculateAll();
         
-        const secondHand = new Player(this.user, this.userBet, this.updateScoreFunction);
+        const secondHand = new Player(this.user, this.userBet, this.updateScoreFunction, true);
         secondHand.giveCard(cardForSecondHand);
         return secondHand;
     }
@@ -298,7 +303,7 @@ export class Player {
 
     private hasBlackjack(cardsToCheck: Card[], handValues: number[]): boolean {
         return cardsToCheck.length === 2 && handValues.findIndex((v) => v === Player.MAX_HAND_VALUE) !== -1 &&
-            (cardsToCheck[0].rank === Rank.Ace || cardsToCheck[1].rank === Rank.Ace);
+            (cardsToCheck[0].rank === Rank.Ace || cardsToCheck[1].rank === Rank.Ace) && !this.fromSplit;
     }
 
     private recalculateIsBusted(handValues: number[]): void {
