@@ -28,7 +28,6 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
     private readonly deckFactory = new DeckFactory();
     private readonly pluginTexts = new PluginTexts(Plugin.HIT_CMD, Plugin.STAND_CMD, Plugin.SURRENDER_CMD, Plugin.DOUBLE_DOWN_CMD, Plugin.SPLIT_CMD);
     private readonly gameManagers = new Map<number, ChatGameManager>();
-    private readonly previousBets = new Map<number, number>();
 
     constructor() {
         super("Blackjack", "1.3.0");
@@ -150,12 +149,12 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
         if (!match) {
             return `⚠️ Not enough arguments! Format: /${Plugin.BET_CMD} [value]`;
         }
-        const bet = this.parseScoreInput(match, user.score, this.previousBets.get(user.id));
+        const gameManager = this.getOrCreateGameManager(chat);
+        const bet = this.parseScoreInput(match, user.score, gameManager.statistics.previousBets.get(user.id), gameManager.statistics.previousWins.get(user.id));
 
         if (bet === null || isNaN(bet)) {
             return "⚠️ Your bet has to be a numeric value, smartass.";
         }
-        const gameManager = this.getOrCreateGameManager(chat);
 
         try {
             if (gameManager.canStartNewGame) {
@@ -164,7 +163,7 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
                 if (typeof (startNewGameResult) === "string") {
                     return `⚠️ ${startNewGameResult}`;
                 }
-                this.previousBets.set(user.id, bet as number);
+                gameManager.statistics.previousBets.set(user.id, bet as number);
                 return `📢 @${user.name} is starting a game of Blackjack, starting in ${startNewGameResult} seconds...` +
                     `\n\nMake a /${Plugin.BET_CMD} to join in.`;
             } else {
@@ -173,7 +172,7 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
                 if (joinGameResult) {
                     return `⚠️ ${joinGameResult}`;
                 }
-                this.previousBets.set(user.id, bet as number);
+                gameManager.statistics.previousBets.set(user.id, bet as number);
                 return `@${user.name} has joined the game of Blackjack!`;
             }
         } catch (ex: any) {
@@ -294,7 +293,7 @@ export class Plugin extends AbstractPlugin implements IBlackjackGameListener<Cha
 
     private statistics(chat: Chat, user: User, msg: TelegramBot.Message, match: string): string {
         const gameManager = this.getOrCreateGameManager(chat);
-        return gameManager.formattedStatisticsText;
+        return gameManager.statistics.formattedText;
     }
 
     private getOrCreateGameManager(chat: Chat): ChatGameManager {

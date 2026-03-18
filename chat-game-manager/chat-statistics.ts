@@ -3,6 +3,9 @@
  */
 export class ChatStatistics {
 
+    public readonly previousBets = new Map<number, number>();
+    public readonly previousWins = new Map<number, number>();
+
     private myDealerBalance = 0;
 
     /**

@@ -27,8 +27,9 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
     private static readonly SURRENDERED_REWARD_REASON = "surrendered.reward";
     private static readonly EQUALED_DEALER_REWARD_REASON = "equaled.dealer.reward";
 
+    public readonly statistics = new ChatStatistics();
+
     private readonly listeners = new Array<IBlackjackGameListener<ChatGameManager>>();
-    private readonly statistics = new ChatStatistics();
 
     private game: BlackjackGame | null = null;
 
@@ -194,13 +195,6 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
     }
 
     /**
-     * A formatted text representation of the chat's Blackjack statistics.
-     */
-    public get formattedStatisticsText(): string {
-        return this.statistics.formattedText;
-    }
-
-    /**
      * Subscribes to this blackjack game to receive asynchronous updates.
      * @param subscriber The component subscribing to this game.
      */
@@ -291,6 +285,7 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
             const scoreArgs = new AlterUserScoreArgs(user, points, this.pluginName, reason);
             const scoreDelta = this.chat.alterUserScore(scoreArgs);
             this.statistics.updateDealerBalance(-scoreDelta);
+            return scoreDelta;
         };
         return new Player(user, bet, updateScoreFunction, false);
     }
@@ -307,6 +302,9 @@ export class ChatGameManager implements IBlackjackGameListener<BlackjackGame> {
     }
 
     private rewardPlayers(players: Player[], multiplier: number, reason: string) {
-        players.forEach((player) => player.rewardPlayer(multiplier, reason));
+        players.forEach((player) => {
+            const winnings = player.rewardPlayer(multiplier, reason);
+            this.statistics.previousWins.set(player.identifier, winnings);
+        });
     }
 }

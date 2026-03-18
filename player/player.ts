@@ -37,7 +37,7 @@ export class Player {
     constructor(
         private readonly user: User | null = null,
         private userBet = 0,
-        private readonly updateScoreFunction?: ((points: number, reason: string) => void),
+        private readonly updateScoreFunction?: ((points: number, reason: string) => number),
         private fromSplit = false) { }
 
     /**
@@ -262,7 +262,7 @@ export class Player {
         let reward = 0;
         if (!this.isDealer && this.updateScoreFunction) {
             reward = Math.floor(this.userBet * multiplier);
-            this.updateScoreFunction(reward, reason);
+            reward = this.updateScoreFunction(reward, reason);
         }
         return reward;
     }
